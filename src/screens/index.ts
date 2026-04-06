@@ -1,6 +1,8 @@
 export { EntryScreen } from './EntryScreen';
 export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
+export { RegisterSelfEmployedQuestionScreen } from './RegisterSelfEmployedQuestionScreen';
+export { RegisterPersonalInfoScreen } from './RegisterPersonalInfoScreen';
 export { CitySelectionScreen } from './CitySelectionScreen';
 export { DashboardScreen } from './DashboardScreen';
 export { SearchOrdersScreen } from './SearchOrdersScreen';

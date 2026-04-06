@@ -11,7 +11,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 type RootStackParamList = {
   Entry: undefined;
   Login: undefined;
-  Register: undefined;
+  Register: { phone: string; city: string };
+  RegisterSelfEmployedQuestion: { phone: string };
+  RegisterPersonalInfo: { phone: string; city: string };
   CitySelection: { phone: string };
   Dashboard: undefined;
 };

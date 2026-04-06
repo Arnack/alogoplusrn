@@ -7,6 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import { EntryScreen } from '../screens/EntryScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { RegisterSelfEmployedQuestionScreen } from '../screens/RegisterSelfEmployedQuestionScreen';
+import { RegisterPersonalInfoScreen } from '../screens/RegisterPersonalInfoScreen';
 import { CitySelectionScreen } from '../screens/CitySelectionScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SearchOrdersScreen } from '../screens/SearchOrdersScreen';
@@ -22,7 +24,9 @@ import { COLORS } from '../constants';
 export type RootStackParamList = {
   Entry: undefined;
   Login: undefined;
-  Register: { phone: string; cityId: number; cityName: string };
+  Register: { phone: string; city: string };
+  RegisterSelfEmployedQuestion: { phone: string };
+  RegisterPersonalInfo: { phone: string; city: string };
   CitySelection: { phone: string };
   Dashboard: undefined;
   SearchOrders: undefined;
@@ -52,6 +56,8 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="Entry" component={EntryScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="RegisterSelfEmployedQuestion" component={RegisterSelfEmployedQuestionScreen} />
+        <Stack.Screen name="RegisterPersonalInfo" component={RegisterPersonalInfoScreen} />
         <Stack.Screen name="CitySelection" component={CitySelectionScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="SearchOrders" component={SearchOrdersScreen} />
