@@ -1,7 +1,7 @@
 import { MenuItem } from '../types';
 
 // API Configuration
-export const API_BASE_URL = 'http://localhost:8000/api/v1';
+export const API_BASE_URL = 'https://algoritmplus.online/api/v1';
 export const API_TIMEOUT = 30000;
 
 // App Colors - Clean, strict theme

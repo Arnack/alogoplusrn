@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -50,7 +50,7 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ navigation }) => {
 
   const checkUser = async () => {
     const cleanPhone = phone.replace(/\D/g, '');
-    
+
     if (cleanPhone.length !== 11) {
       error('Введите корректный номер телефона');
       return;
@@ -58,8 +58,8 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const response = await apiService.checkUser(`+${cleanPhone}`);
-      
+      const response = await apiService.checkUser(`+${cleanPhone}`, 'Не выбран');
+
       if (response.data.exists) {
         // User exists, go to login
         navigation.navigate('Login');
@@ -120,7 +120,14 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ navigation }) => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Продолжая, вы соглашаетесь с условиями обработки персональных данных
+            Продолжая, вы соглашаетесь с{'\n'}
+            <Text style={styles.footerLink} onPress={() => Linking.openURL('https://algoritmplus.online/user-agreement')}>
+              Пользовательским соглашением
+            </Text>
+            {' '}и{' '}
+            <Text style={styles.footerLink} onPress={() => Linking.openURL('https://algoritmplus.online/docs/privacy-policy')}>
+              Политикой конфиденциальности
+            </Text>
           </Text>
         </View>
       </ScrollView>
@@ -201,5 +208,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     color: COLORS.gray,
     textAlign: 'center',
+  },
+  footerLink: {
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
   },
 });

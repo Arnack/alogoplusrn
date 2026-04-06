@@ -107,7 +107,9 @@ export const Toast: React.FC<ToastProps> = ({
         },
       ]}
     >
-      <View style={styles.icon}>{getIcon()}</View>
+      <View style={styles.icon}>
+        <Text style={styles.iconText}>{getIcon()}</Text>
+      </View>
       <Text style={styles.message}>{message}</Text>
     </Animated.View>
   );
@@ -207,6 +209,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.m,
+  },
+  iconText: {
+    fontSize: FONT_SIZES.l,
+    color: COLORS.white,
+    fontWeight: '700',
   },
   message: {
     flex: 1,

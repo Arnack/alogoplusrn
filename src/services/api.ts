@@ -64,17 +64,19 @@ class ApiService {
     return response.data;
   }
 
-  async checkUser(phone: string) {
+  async checkUser(phone: string, city: string) {
     const response = await this.api.post<ApiResponse<{ exists: boolean; needsRegistration: boolean }>>('/auth/check-user', {
       phone,
+      city,
     });
     return response.data;
   }
 
-  async loginPhone(phone: string, inn: string) {
+  async loginPhone(phone: string, innLast4: string, city: string) {
     const response = await this.api.post<ApiResponse<{ token: string; user: any }>>('/auth/login-phone', {
       phone,
-      inn,
+      inn_last4: innLast4,
+      city,
     });
     return response.data;
   }

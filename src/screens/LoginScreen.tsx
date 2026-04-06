@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
@@ -24,9 +24,16 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [phone, setPhone] = useState('');
-  const [inn, setInn] = useState('');
+  const [innLast4, setInnLast4] = useState('');
+  const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   const { success, error, ToastContainer } = useToast();
+
+  useEffect(() => {
+    storage.getCity().then((c) => {
+      if (c) setCity(c);
+    });
+  }, []);
 
   const formatPhone = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
@@ -51,25 +58,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const handleLogin = async () => {
     const cleanPhone = phone.replace(/\D/g, '');
-    const cleanInn = inn.trim();
+    const cleanInnLast4 = innLast4.trim();
 
     if (cleanPhone.length !== 11) {
       error('Введите корректный номер телефона');
       return;
     }
 
-    if (cleanInn.length !== 12) {
-      error('ИНН должен содержать 12 цифр');
+    if (cleanInnLast4.length !== 4) {
+      error('Введите последние 4 цифры ИНН');
+      return;
+    }
+
+    if (!city) {
+      error('Город не выбран. Пройдите регистрацию.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await apiService.loginPhone(`+${cleanPhone}`, cleanInn);
-      
+      const response = await apiService.loginPhone(`+${cleanPhone}`, cleanInnLast4, city);
+
       await storage.setToken(response.data.token);
       await storage.setUser(JSON.stringify(response.data.user));
-      
+
       success('Вы успешно вошли');
       navigation.reset({
         index: 0,
@@ -90,7 +102,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Вход</Text>
-          <Text style={styles.subtitle}>Введите телефон и ИНН</Text>
+          <Text style={styles.subtitle}>Введите телефон и 4 цифры ИНН</Text>
         </View>
 
         <View style={styles.content}>
@@ -104,13 +116,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           />
 
           <Input
-            label="ИНН"
-            value={inn}
-            onChangeText={setInn}
-            placeholder="12 цифр ИНН"
+            label="Последние 4 цифры ИНН"
+            value={innLast4}
+            onChangeText={(text) => setInnLast4(text.replace(/\D/g, '').slice(0, 4))}
+            placeholder="1234"
             keyboardType="number-pad"
-            maxLength={12}
-            hint="ИНН указан при регистрации"
+            maxLength={4}
+            hint="Указан при регистрации"
           />
 
           <Button
