@@ -139,24 +139,24 @@ class ApiService {
 
   // Search endpoints
   async getOrderCustomers() {
-    const response = await this.api.get<ApiResponse<any[]>>('/search/order-customers');
+    const response = await this.api.get<any>('/search/order-customers');
     return response.data;
   }
 
-  async searchOrders(customerId: number, params?: { date?: string; shift?: 'day' | 'night' }) {
-    const response = await this.api.get<ApiResponse<any[]>>('/search/orders', {
-      params: { customerId, ...params },
+  async searchOrders(customerId: number) {
+    const response = await this.api.get<any>('/search/orders', {
+      params: { customer_id: customerId },
     });
     return response.data;
   }
 
   async getOrderApplyPreview(orderId: number) {
-    const response = await this.api.get<ApiResponse<any>>(`/search/orders/${orderId}/apply-preview`);
+    const response = await this.api.get<any>(`/search/orders/${orderId}/apply-preview`);
     return response.data;
   }
 
   async createOrderApplication(orderId: number) {
-    const response = await this.api.post<ApiResponse<any>>(`/search/orders/${orderId}/applications`);
+    const response = await this.api.post<any>(`/search/orders/${orderId}/applications`, { order_from_friend: false });
     return response.data;
   }
 

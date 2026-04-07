@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHIFT_TIMES } from '../constants';
-import { Card, StatCard } from '../components/Card';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal } from 'react-native';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
+import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingScreen } from '../components/Loading';
 import { SafeView } from '../components/SafeView';
@@ -27,14 +27,55 @@ interface SearchOrdersScreenProps {
   navigation: SearchOrdersScreenNavigationProp;
 }
 
+interface CustomerItem {
+  customer_id: number;
+  organization: string;
+  orders_available: number;
+}
+
+interface OrderItem {
+  id: number;
+  job_name: string;
+  date: string;
+  city: string;
+  customer_id: number;
+  day_shift: string | null;
+  night_shift: string | null;
+  amount_base: string;
+  amount_with_rating: string;
+  job_fp: string | null;
+  travel_compensation_rub: number | null;
+}
+
+interface ConfirmState {
+  orderId: number;
+  summaryHtml: string;
+  messageHtml: string;
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .trim();
+}
+
 export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigation }) => {
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<CustomerItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [applyingOrderId, setApplyingOrderId] = useState<number | null>(null);
-  const { success, error, warning, ToastContainer } = useToast();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const { success, error, ToastContainer } = useToast();
 
   useEffect(() => {
     loadCustomers();
@@ -42,8 +83,8 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
 
   const loadCustomers = async () => {
     try {
-      const response = await apiService.getOrderCustomers();
-      setCustomers(response.data);
+      const data = await apiService.getOrderCustomers();
+      setCustomers(Array.isArray(data) ? data : (data as any)?.data || []);
     } catch (err: any) {
       error('Ошибка загрузки заказчиков');
     }
@@ -52,8 +93,8 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
   const loadOrders = async (customerId: number) => {
     setLoading(true);
     try {
-      const response = await apiService.searchOrders(customerId);
-      setOrders(response.data);
+      const data = await apiService.searchOrders(customerId);
+      setOrders(Array.isArray(data) ? data : (data as any)?.data || []);
       setSelectedCustomer(customerId);
     } catch (err: any) {
       error('Ошибка загрузки заказов');
@@ -72,33 +113,49 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
     setRefreshing(false);
   };
 
-  const handleApply = async (orderId: number) => {
+  const handleApplyPress = async (orderId: number) => {
     setApplyingOrderId(orderId);
     try {
-      // Preview
-      await apiService.getOrderApplyPreview(orderId);
-      
-      // Apply
-      await apiService.createOrderApplication(orderId);
-      success('Заявка создана');
-      
-      // Reload orders
-      if (selectedCustomer) {
-        await loadOrders(selectedCustomer);
-      }
+      const preview = await apiService.getOrderApplyPreview(orderId);
+      const previewData = (preview as any)?.data || preview;
+      setConfirm({
+        orderId,
+        summaryHtml: previewData?.order_summary_html || '',
+        messageHtml: previewData?.message_html || '',
+      });
     } catch (err: any) {
-      error(err.message);
+      error(err.message || 'Ошибка загрузки');
     } finally {
       setApplyingOrderId(null);
     }
   };
 
-  const getShiftColor = (shift: string) => {
-    return shift === 'day' ? COLORS.day : COLORS.night;
+  const handleConfirm = async () => {
+    if (!confirm) return;
+    setConfirming(true);
+    try {
+      await apiService.createOrderApplication(confirm.orderId);
+      success('Заявка принята');
+      setConfirm(null);
+      if (selectedCustomer) {
+        await loadOrders(selectedCustomer);
+        await loadCustomers();
+      }
+    } catch (err: any) {
+      error(err.message || 'Ошибка при отклике');
+    } finally {
+      setConfirming(false);
+    }
   };
 
-  const getCustomerName = (customerId: number) => {
-    return customers.find((c) => c.id === customerId)?.name || '';
+  const getShiftLabel = (order: OrderItem) => {
+    if (order.day_shift) return `День  ${order.day_shift}`;
+    if (order.night_shift) return `Ночь  ${order.night_shift}`;
+    return '—';
+  };
+
+  const getShiftColor = (order: OrderItem) => {
+    return order.day_shift ? COLORS.day : COLORS.night;
   };
 
   return (
@@ -119,100 +176,145 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
       >
         {/* Customer Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Заказчики</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.customersScroll}>
-            {customers.map((customer) => (
-              <TouchableOpacity
-                key={customer.id}
-                style={[
-                  styles.customerChip,
-                  selectedCustomer === customer.id && styles.customerChipSelected,
-                ]}
-                onPress={() => loadOrders(customer.id)}
-              >
-                <Text
-                  style={[
-                    styles.customerChipText,
-                    selectedCustomer === customer.id && styles.customerChipTextSelected,
-                  ]}
+          <Text style={styles.sectionTitle}>Получатели услуг</Text>
+          {customers.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>🏢</Text>
+              <Text style={styles.emptyText}>Нет доступных заказчиков</Text>
+            </View>
+          ) : (
+            customers.map((customer) => {
+              const isSelected = selectedCustomer === customer.customer_id;
+              return (
+                <TouchableOpacity
+                  key={customer.customer_id}
+                  style={[styles.customerCard, isSelected && styles.customerCardSelected]}
+                  onPress={() => loadOrders(customer.customer_id)}
+                  activeOpacity={0.75}
                 >
-                  {customer.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  <View style={[styles.customerIcon, isSelected && styles.customerIconSelected]}>
+                    <Text style={styles.customerIconText}>🏢</Text>
+                  </View>
+                  <View style={styles.customerInfo}>
+                    <Text style={[styles.customerName, isSelected && styles.customerNameSelected]} numberOfLines={2}>
+                      {customer.organization}
+                    </Text>
+                  </View>
+                  <View style={[styles.customerBadge, isSelected && styles.customerBadgeSelected]}>
+                    <Text style={[styles.customerBadgeText, isSelected && styles.customerBadgeTextSelected]}>
+                      {customer.orders_available}
+                    </Text>
+                    <Text style={[styles.customerBadgeLabel, isSelected && styles.customerBadgeTextSelected]}>
+                      {customer.orders_available === 1 ? 'заявка' : customer.orders_available < 5 ? 'заявки' : 'заявок'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         {/* Orders List */}
-        {loading ? (
-          <LoadingScreen text="Загрузка заказов..." />
-        ) : (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Доступные заказы {orders.length > 0 && `(${orders.length})`}
-            </Text>
-            
-            {orders.length === 0 ? (
-              <Card>
-                <Text style={styles.emptyText}>Нет доступных заказов</Text>
-              </Card>
-            ) : (
-              orders.map((order) => (
-                <Card key={order.id} style={styles.orderCard}>
-                  <View style={styles.orderHeader}>
-                    <View>
-                      <Text style={styles.orderCustomer}>{order.customerName}</Text>
-                      <Text style={styles.orderJob}>{order.jobName}</Text>
-                    </View>
-                    <View style={styles.orderAmount}>
-                      <Text style={styles.orderAmountValue}>{order.adjustedAmount || order.amount} ₽</Text>
-                    </View>
-                  </View>
+        {selectedCustomer !== null && (
+          loading ? (
+            <LoadingScreen text="Загрузка заявок..." />
+          ) : (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                Заявки {orders.length > 0 && `(${orders.length})`}
+              </Text>
 
-                  <View style={styles.orderDetails}>
-                    <View style={styles.orderDetail}>
-                      <Text style={styles.orderDetailLabel}>Дата</Text>
-                      <Text style={styles.orderDetailValue}>{order.date}</Text>
-                    </View>
-                    <View style={styles.orderDetail}>
-                      <Text style={styles.orderDetailLabel}>Смена</Text>
-                      <View style={[
-                        styles.shiftBadge,
-                        { backgroundColor: getShiftColor(order.shift) + '20' },
-                      ]}>
-                        <Text style={[
-                          styles.shiftBadgeText,
-                          { color: getShiftColor(order.shift) },
-                        ]}>
-                          {order.shift === 'day' ? 'День' : 'Ночь'}
-                        </Text>
+              {orders.length === 0 ? (
+                <Card>
+                  <Text style={styles.emptyText}>Нет доступных заявок</Text>
+                </Card>
+              ) : (
+                orders.map((order) => (
+                  <Card key={order.id} style={styles.orderCard}>
+                    <View style={styles.orderHeader}>
+                      <View style={styles.orderHeaderLeft}>
+                        <Text style={styles.orderJob}>{order.job_name}</Text>
+                        <Text style={styles.orderCity}>{order.city}</Text>
+                      </View>
+                      <View style={styles.orderAmount}>
+                        <Text style={styles.orderAmountValue}>{order.amount_with_rating} ₽</Text>
+                        {order.travel_compensation_rub ? (
+                          <Text style={styles.orderTravel}>+{order.travel_compensation_rub} ₽ 🚌</Text>
+                        ) : null}
                       </View>
                     </View>
-                    <View style={styles.orderDetail}>
-                      <Text style={styles.orderDetailLabel}>Город</Text>
-                      <Text style={styles.orderDetailValue}>{order.city}</Text>
-                    </View>
-                    <View style={styles.orderDetail}>
-                      <Text style={styles.orderDetailLabel}>Места</Text>
-                      <Text style={styles.orderDetailValue}>
-                        {order.workersCount}/{order.workersRequired}
-                      </Text>
-                    </View>
-                  </View>
 
-                  <Button
-                    title="Взять заказ"
-                    onPress={() => handleApply(order.id)}
-                    loading={applyingOrderId === order.id}
-                    fullWidth
-                    size="large"
-                  />
-                </Card>
-              ))
-            )}
-          </View>
+                    <View style={styles.orderDetails}>
+                      <View style={styles.orderDetail}>
+                        <Text style={styles.orderDetailLabel}>Дата</Text>
+                        <Text style={styles.orderDetailValue}>{order.date}</Text>
+                      </View>
+                      <View style={styles.orderDetail}>
+                        <Text style={styles.orderDetailLabel}>Смена</Text>
+                        <View style={[styles.shiftBadge, { backgroundColor: getShiftColor(order) + '20' }]}>
+                          <Text style={[styles.shiftBadgeText, { color: getShiftColor(order) }]}>
+                            {getShiftLabel(order)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {order.job_fp ? (
+                      <Text style={styles.jobFp}>{order.job_fp}</Text>
+                    ) : null}
+
+                    <Button
+                      title="Взять заявку"
+                      onPress={() => handleApplyPress(order.id)}
+                      loading={applyingOrderId === order.id}
+                      fullWidth
+                      size="large"
+                    />
+                  </Card>
+                ))
+              )}
+            </View>
+          )
+        )}
+
+        {selectedCustomer === null && customers.length > 0 && (
+          <Card>
+            <Text style={styles.emptyText}>Выберите получателя услуг</Text>
+          </Card>
         )}
       </ScrollView>
+
+      {/* Confirmation Modal */}
+      <Modal visible={confirm !== null} transparent animationType="fade" onRequestClose={() => setConfirm(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Подтверждение</Text>
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {confirm?.summaryHtml ? (
+                <Text style={styles.modalSummary}>{stripHtml(confirm.summaryHtml)}</Text>
+              ) : null}
+              {confirm?.messageHtml ? (
+                <Text style={styles.modalMessage}>{stripHtml(confirm.messageHtml)}</Text>
+              ) : null}
+            </ScrollView>
+            <View style={styles.modalButtons}>
+              <Button
+                title="Отмена"
+                variant="outline"
+                onPress={() => setConfirm(null)}
+                style={styles.modalBtn}
+              />
+              <Button
+                title="Подтвердить"
+                onPress={handleConfirm}
+                loading={confirming}
+                style={styles.modalBtn}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ToastContainer />
     </SafeView>
   );
@@ -235,35 +337,83 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: SPACING.m,
   },
-  customersScroll: {
+  customerCard: {
     flexDirection: 'row',
-  },
-  customerChip: {
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.round,
-    backgroundColor: COLORS.background,
-    marginRight: SPACING.s,
-    borderWidth: 1,
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.m,
+    marginBottom: SPACING.s,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
-  customerChipSelected: {
-    backgroundColor: COLORS.primary,
+  customerCardSelected: {
     borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '08',
   },
-  customerChipText: {
-    fontSize: FONT_SIZES.s,
+  customerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.m,
+  },
+  customerIconSelected: {
+    backgroundColor: COLORS.primary + '18',
+  },
+  customerIconText: {
+    fontSize: 22,
+  },
+  customerInfo: {
+    flex: 1,
+    marginRight: SPACING.s,
+  },
+  customerName: {
+    fontSize: FONT_SIZES.m,
+    fontWeight: '600',
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+  customerNameSelected: {
+    color: COLORS.primary,
+  },
+  customerBadge: {
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: BORDER_RADIUS.m,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.xs,
+    minWidth: 48,
+  },
+  customerBadgeSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  customerBadgeText: {
+    fontSize: FONT_SIZES.l,
+    fontWeight: '700',
     color: COLORS.text,
   },
-  customerChipTextSelected: {
+  customerBadgeLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.gray,
+  },
+  customerBadgeTextSelected: {
     color: COLORS.white,
-    fontWeight: '500',
+  },
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xl,
+  },
+  emptyIcon: {
+    fontSize: 36,
+    marginBottom: SPACING.s,
   },
   emptyText: {
     fontSize: FONT_SIZES.m,
     color: COLORS.gray,
     textAlign: 'center',
-    padding: SPACING.xl,
   },
   orderCard: {
     marginBottom: SPACING.m,
@@ -273,12 +423,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.m,
   },
-  orderCustomer: {
+  orderHeaderLeft: {
+    flex: 1,
+    marginRight: SPACING.s,
+  },
+  orderJob: {
     fontSize: FONT_SIZES.l,
     fontWeight: '600',
     color: COLORS.text,
   },
-  orderJob: {
+  orderCity: {
     fontSize: FONT_SIZES.s,
     color: COLORS.gray,
     marginTop: SPACING.xs,
@@ -290,6 +444,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xl,
     fontWeight: '700',
     color: COLORS.success,
+  },
+  orderTravel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.info,
+    marginTop: SPACING.xs,
   },
   orderDetails: {
     flexDirection: 'row',
@@ -320,5 +479,53 @@ const styles = StyleSheet.create({
   shiftBadgeText: {
     fontSize: FONT_SIZES.s,
     fontWeight: '600',
+  },
+  jobFp: {
+    fontSize: FONT_SIZES.s,
+    color: COLORS.gray,
+    marginBottom: SPACING.m,
+    lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.l,
+  },
+  modalBox: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.xl,
+    width: '100%',
+    maxHeight: '80%',
+    padding: SPACING.l,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZES.l,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.m,
+  },
+  modalScroll: {
+    maxHeight: 300,
+    marginBottom: SPACING.m,
+  },
+  modalSummary: {
+    fontSize: FONT_SIZES.m,
+    color: COLORS.text,
+    lineHeight: 22,
+    marginBottom: SPACING.m,
+  },
+  modalMessage: {
+    fontSize: FONT_SIZES.s,
+    color: COLORS.gray,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: SPACING.m,
+  },
+  modalBtn: {
+    flex: 1,
   },
 });

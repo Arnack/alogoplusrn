@@ -46,6 +46,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [innLast4, setInnLast4] = useState('');
   const [showRules, setShowRules] = useState(false);
   const [rulesText, setRulesText] = useState('');
+  const [rulesLoading, setRulesLoading] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -77,11 +78,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const handleOpenRules = async () => {
     setShowRules(true);
     if (!rulesText) {
+      setRulesLoading(true);
       try {
         const res = await apiService.getWorkerRules();
-        setRulesText(res?.text || res?.data?.text || 'Правила не найдены.');
+        const raw = res?.text || res?.data?.text || 'Правила не найдены.';
+        setRulesText(raw.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim());
       } catch {
         setRulesText('Не удалось загрузить правила.');
+      } finally {
+        setRulesLoading(false);
       }
     }
   };
@@ -305,7 +310,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       </ScrollView>
 
       <CustomModal visible={showRules} onClose={() => setShowRules(false)} title="Правила работы">
-        <Text style={styles.modalText}>{rulesText || 'Загрузка...'}</Text>
+        <Text style={styles.modalText}>{rulesLoading ? 'Загрузка...' : (rulesText || 'Правила не найдены.')}</Text>
       </CustomModal>
 
       <CustomModal visible={showReferral} onClose={() => setShowReferral(false)} title="Реферальная программа">
