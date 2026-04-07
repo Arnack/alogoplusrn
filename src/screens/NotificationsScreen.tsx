@@ -43,7 +43,7 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
     setLoading(true);
     try {
       const response = await apiService.getNotifications();
-      setNotifications(response.data);
+      setNotifications(response.data ?? []);
     } catch (err: any) {
       error('Ошибка загрузки уведомлений');
     } finally {
