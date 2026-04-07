@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
-import { Card, StatCard } from '../components/Card';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { LoadingScreen } from '../components/Loading';
-import { CustomModal } from '../components/Modal';
-import { ConfirmationModal } from '../components/Modal';
+import { CustomModal, ConfirmationModal } from '../components/Modal';
 import { SafeView } from '../components/SafeView';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
@@ -33,38 +32,41 @@ interface ProfileScreenProps {
   navigation: ProfileScreenNavigationProp;
 }
 
+// AboutPanelOut fields:
+// phone_registry, fio_registry, phone_actual, fio_actual,
+// card, balance, city, rating, total_orders, successful_orders, in_rr
+
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const [user, setUser] = useState<any>(null);
-  const [rating, setRating] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [panel, setPanel] = useState<any>(null);
+  const [me, setMe] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editingCard, setEditingCard] = useState(false);
   const [newCard, setNewCard] = useState('');
+  const [innLast4, setInnLast4] = useState('');
   const [showRules, setShowRules] = useState(false);
+  const [rulesText, setRulesText] = useState('');
   const [showReferral, setShowReferral] = useState(false);
+  const [referralLink, setReferralLink] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [referralInfo, setReferralInfo] = useState<any>(null);
   const { success, error, ToastContainer } = useToast();
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    setLoading(true);
+  const loadProfile = useCallback(async () => {
     try {
-      const [userResponse, ratingResponse] = await Promise.all([
+      const [panelRes, meRes] = await Promise.all([
+        apiService.getProfileAboutPanel(),
         apiService.getMe(),
-        apiService.getRating(),
       ]);
-      setUser(userResponse.data);
-      setRating(ratingResponse.data);
-    } catch (err: any) {
+      setPanel(panelRes);
+      setMe(meRes);
+    } catch {
       error('Ошибка загрузки профиля');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -72,277 +74,252 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  const handleOpenRules = async () => {
+    setShowRules(true);
+    if (!rulesText) {
+      try {
+        const res = await apiService.getWorkerRules();
+        setRulesText(res?.text || res?.data?.text || 'Правила не найдены.');
+      } catch {
+        setRulesText('Не удалось загрузить правила.');
+      }
+    }
+  };
+
+  const handleOpenReferral = async () => {
+    setShowReferral(true);
+    if (!referralLink) {
+      try {
+        const res = await apiService.getReferralInfo();
+        setReferralLink(res?.link || res?.data?.link || '');
+      } catch {
+        setReferralLink('');
+      }
+    }
+  };
+
   const handleUpdateCard = async () => {
-    if (!newCard || newCard.replace(/\s/g, '').length < 16) {
+    const cleaned = newCard.replace(/\s/g, '');
+    if (cleaned.length < 16) {
       error('Введите корректный номер карты');
       return;
     }
-
+    if (innLast4.length !== 4) {
+      error('Введите последние 4 цифры ИНН');
+      return;
+    }
     try {
-      await apiService.updateBankCard(newCard.replace(/\s/g, ''));
+      await apiService.updateBankCard(cleaned, innLast4);
       success('Карта обновлена');
       setEditingCard(false);
       setNewCard('');
-      await loadProfile();
+      setInnLast4('');
+      loadProfile();
     } catch (err: any) {
       error(err.message);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await apiService.logout();
-    } catch (err) {
-      // Ignore errors during logout
-    }
-    
+    try { await apiService.logout(); } catch {}
     await storage.clearAll();
-    success('Вы вышли из аккаунта');
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
-  };
-
-  const formatCardNumber = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    const formatted = cleaned.replace(/(\d{4})/g, '$1 ').trim();
-    return formatted;
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
   const handleCardChange = (text: string) => {
-    const formatted = formatCardNumber(text);
-    if (formatted.length <= 23) {
-      setNewCard(formatted);
-    }
+    const cleaned = text.replace(/\D/g, '');
+    const formatted = cleaned.replace(/(\d{4})/g, '$1 ').trim();
+    if (formatted.length <= 23) setNewCard(formatted);
   };
 
-  if (loading) {
-    return <LoadingScreen text="Загрузка профиля..." />;
-  }
+  if (loading) return <LoadingScreen text="Загрузка профиля..." />;
+
+  // fio_actual = "Фамилия Имя Отчество"
+  const fio = (panel?.fio_actual || panel?.fio_registry || '').trim();
+  const parts = fio.split(/\s+/);
+  const initials = `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
+
+  const stats = [
+    { label: 'Баланс', value: `${panel?.balance ?? 0} ₽`, icon: 'cash-outline' as const, color: '#27AE60', bg: '#EAFAF1' },
+    { label: 'Рейтинг', value: panel?.rating ?? '—', icon: 'star-outline' as const, color: '#F39C12', bg: '#FEF9E7' },
+    { label: 'Заказов', value: String(panel?.total_orders ?? 0), icon: 'briefcase-outline' as const, color: '#4A90D9', bg: '#EBF4FF' },
+    { label: 'Выполнено', value: String(panel?.successful_orders ?? 0), icon: 'checkmark-circle-outline' as const, color: '#7B68EE', bg: '#F0EEFF' },
+  ];
+
+  const infoRows = [
+    { label: 'Телефон (реестр)', value: panel?.phone_registry || '—' },
+    { label: 'Телефон (факт.)', value: panel?.phone_actual || '—' },
+    { label: 'ФИО (реестр)', value: panel?.fio_registry || '—' },
+    { label: 'ФИО (факт.)', value: panel?.fio_actual || '—' },
+    { label: 'Город', value: panel?.city || '—' },
+    { label: 'ИНН', value: me?.inn_masked || '—' },
+  ];
+
+  const actions = [
+    { icon: 'document-text-outline' as const, label: 'Правила работы', onPress: handleOpenRules },
+    { icon: 'gift-outline' as const, label: 'Реферальная программа', onPress: handleOpenReferral },
+    { icon: 'chatbubble-outline' as const, label: 'Поддержка', onPress: () => success('Обращение направлено') },
+  ];
 
   return (
     <SafeView style={styles.container}>
       <ScreenHeader title="Профиль" onBack={() => navigation.goBack()} />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
-          />
-        }
+        contentContainerStyle={styles.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* User Info */}
-        <Card style={styles.userCard}>
-          <View style={styles.userInfo}>
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>
-                {user?.firstName?.charAt(0)}
-                {user?.lastName?.charAt(0)}
-              </Text>
-            </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>
-                {user?.lastName} {user?.firstName}
-              </Text>
-              <Text style={styles.userCity}>{user?.city}</Text>
-              <Text style={styles.userPhone}>{user?.phone}</Text>
-            </View>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.avatar}>
+            {initials ? (
+              <Text style={styles.avatarText}>{initials}</Text>
+            ) : (
+              <Ionicons name="person" size={32} color={COLORS.white} />
+            )}
           </View>
-        </Card>
+          <Text style={styles.heroName}>{fio || '—'}</Text>
+          <View style={styles.heroBadgeRow}>
+            {panel?.in_rr && (
+              <View style={styles.heroBadge}>
+                <Ionicons name="checkmark-circle" size={13} color="#27AE60" />
+                <Text style={[styles.heroBadgeText, { color: '#27AE60' }]}>Самозанятый</Text>
+              </View>
+            )}
+            {panel?.city && (
+              <View style={styles.heroBadge}>
+                <Ionicons name="location-outline" size={13} color={COLORS.gray} />
+                <Text style={styles.heroBadgeText}>{panel.city}</Text>
+              </View>
+            )}
+          </View>
+        </View>
 
-        {/* Stats */}
-        <Card>
-          <View style={styles.statsRow}>
-            <StatCard
-              label="Рейтинг"
-              value={rating?.coefficient || 1.0}
-              icon="⭐"
-              color={COLORS.warning}
-            />
-            <StatCard
-              label="Баланс"
-              value={`${user?.balance || 0} ₽`}
-              icon="💰"
-              color={COLORS.success}
-            />
-          </View>
-          <View style={styles.statsRow}>
-            <StatCard
-              label="Всего заказов"
-              value={rating?.totalOrders || 0}
-              icon="📋"
-              color={COLORS.info}
-            />
-            <StatCard
-              label="Выполнено"
-              value={rating?.successfulOrders || 0}
-              icon="✓"
-              color={COLORS.success}
-            />
-          </View>
-        </Card>
+        {/* Stats strip */}
+        <View style={styles.statsCard}>
+          {stats.map((s, i) => (
+            <React.Fragment key={s.label}>
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: s.bg }]}>
+                  <Ionicons name={s.icon} size={16} color={s.color} />
+                </View>
+                <Text style={styles.statValue}>{s.value}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+              {i < 3 && <View style={styles.statDivider} />}
+            </React.Fragment>
+          ))}
+        </View>
 
-        {/* Personal Info */}
-        <Card title="Личные данные">
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>ИНН</Text>
-            <Text style={styles.infoValue}>{user?.inn}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Дата рождения</Text>
-            <Text style={styles.infoValue}>{user?.birthday}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Статус</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor: user?.isSelfEmployed
-                    ? COLORS.success + '20'
-                    : COLORS.error + '20',
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusText,
-                  {
-                    color: user?.isSelfEmployed
-                      ? COLORS.success
-                      : COLORS.error,
-                  },
-                ]}
-              >
-                {user?.isSelfEmployed ? 'Самозанятый' : 'Не подтверждено'}
-              </Text>
+        {/* Personal info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Личные данные</Text>
+          <View style={styles.card}>
+            {infoRows.map((row, i) => (
+              <View key={row.label} style={[styles.infoRow, i === infoRows.length - 1 && styles.infoRowLast]}>
+                <Text style={styles.infoLabel}>{row.label}</Text>
+                <Text style={styles.infoValue} numberOfLines={1}>{row.value}</Text>
+              </View>
+            ))}
+            <View style={[styles.infoRow, styles.infoRowLast]}>
+              <Text style={styles.infoLabel}>Статус</Text>
+              <View style={[styles.statusBadge, { backgroundColor: panel?.in_rr ? '#EAFAF1' : '#FDEDEC' }]}>
+                <Text style={[styles.statusText, { color: panel?.in_rr ? '#27AE60' : COLORS.error }]}>
+                  {panel?.in_rr ? 'Самозанятый' : 'Не подтверждено'}
+                </Text>
+              </View>
             </View>
           </View>
-        </Card>
+        </View>
 
-        {/* Bank Card */}
-        <Card title="Банковская карта">
+        {/* Bank card */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Банковская карта</Text>
           {editingCard ? (
-            <>
+            <View style={[styles.card, { padding: SPACING.m }]}>
               <Input
-                label="Новый номер карты"
+                label="Номер карты"
                 value={newCard}
                 onChangeText={handleCardChange}
                 placeholder="0000 0000 0000 0000"
                 keyboardType="number-pad"
                 maxLength={23}
               />
-              <View style={styles.cardActions}>
-                <Button
-                  title="Отмена"
-                  onPress={() => {
-                    setEditingCard(false);
-                    setNewCard('');
-                  }}
-                  variant="outline"
-                  style={styles.cardAction}
-                />
-                <Button
-                  title="Сохранить"
-                  onPress={handleUpdateCard}
-                  style={styles.cardAction}
-                />
-              </View>
-            </>
-          ) : (
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardNumber}>
-                {user?.bankCard
-                  ? `**** **** **** ${user.bankCard.slice(-4)}`
-                  : 'Не указана'}
-              </Text>
-              <Button
-                title={user?.bankCard ? 'Изменить карту' : 'Добавить карту'}
-                onPress={() => setEditingCard(true)}
-                variant="outline"
-                size="small"
+              <Input
+                label="Последние 4 цифры ИНН"
+                value={innLast4}
+                onChangeText={(t) => setInnLast4(t.replace(/\D/g, '').slice(0, 4))}
+                placeholder="1234"
+                keyboardType="number-pad"
+                maxLength={4}
               />
+              <View style={styles.cardActions}>
+                <Button title="Отмена" onPress={() => { setEditingCard(false); setNewCard(''); setInnLast4(''); }} variant="outline" style={styles.cardAction} />
+                <Button title="Сохранить" onPress={handleUpdateCard} style={styles.cardAction} />
+              </View>
             </View>
+          ) : (
+            <TouchableOpacity style={styles.bankCard} onPress={() => setEditingCard(true)} activeOpacity={0.85}>
+              <View>
+                <Text style={styles.bankCardLabel}>Номер карты</Text>
+                <Text style={styles.bankCardNumber}>
+                  {panel?.card ? `•••• •••• •••• ${String(panel.card).slice(-4)}` : 'Не указана'}
+                </Text>
+              </View>
+              <View style={styles.bankCardEditBtn}>
+                <Ionicons name="pencil-outline" size={18} color={COLORS.white} />
+              </View>
+            </TouchableOpacity>
           )}
-        </Card>
+        </View>
 
         {/* Actions */}
-        <Card>
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => setShowRules(true)}
-          >
-            <Text style={styles.actionIcon}>📜</Text>
-            <Text style={styles.actionText}>Правила</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => setShowReferral(true)}
-          >
-            <Text style={styles.actionIcon}>🎁</Text>
-            <Text style={styles.actionText}>Реферальная программа</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => success('Обращение в поддержку')}
-          >
-            <Text style={styles.actionIcon}>💬</Text>
-            <Text style={styles.actionText}>Поддержка</Text>
-          </TouchableOpacity>
-        </Card>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Прочее</Text>
+          <View style={styles.card}>
+            {actions.map((item, i) => (
+              <TouchableOpacity
+                key={item.label}
+                style={[styles.actionRow, i === actions.length - 1 && styles.actionRowLast]}
+                onPress={item.onPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.actionIconWrap}>
+                  <Ionicons name={item.icon} size={20} color={COLORS.primary} />
+                </View>
+                <Text style={styles.actionLabel}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* Logout */}
-        <Button
-          title="Выйти из аккаунта"
-          onPress={() => setShowLogoutModal(true)}
-          variant="danger"
-          fullWidth
-          style={styles.logoutButton}
-        />
+        <TouchableOpacity style={styles.logoutBtn} onPress={() => setShowLogoutModal(true)} activeOpacity={0.8}>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
+          <Text style={styles.logoutText}>Выйти из аккаунта</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: SPACING.xl }} />
       </ScrollView>
 
-      {/* Rules Modal */}
-      <CustomModal
-        visible={showRules}
-        onClose={() => setShowRules(false)}
-        title="Правила работы"
-      >
-        <Text style={styles.modalText}>
-          1. На заказ необходимо явиться вовремя{'\n\n'}
-          2. При отказе от назначенного заказа применяются штрафные санкции{'\n\n'}
-          3. Минимальная сумма для вывода средств: 2600 ₽{'\n\n'}
-          4. Рейтинг формируется на основе выполненных заказов{'\n\n'}
-          5. За систематические отказы возможно блокировка аккаунта
-        </Text>
+      <CustomModal visible={showRules} onClose={() => setShowRules(false)} title="Правила работы">
+        <Text style={styles.modalText}>{rulesText || 'Загрузка...'}</Text>
       </CustomModal>
 
-      {/* Referral Modal */}
-      <CustomModal
-        visible={showReferral}
-        onClose={() => setShowReferral(false)}
-        title="Реферальная программа"
-      >
-        <Text style={styles.modalText}>
-          Пригласите друга и получите бонус за каждую отработанную смену!{'\n\n'}
-          Ваша реферальная ссылка:{'\n'}
-          <Text style={styles.referralLink}>
-            https://t.me/Algoritmplus_bot?start=ref_{user?.id}
-          </Text>
-        </Text>
+      <CustomModal visible={showReferral} onClose={() => setShowReferral(false)} title="Реферальная программа">
+        <Text style={styles.modalText}>Пригласите друга и получите бонус за каждую отработанную смену!</Text>
+        {referralLink ? (
+          <View style={styles.referralBox}>
+            <Text style={styles.referralCode}>{referralLink}</Text>
+          </View>
+        ) : null}
       </CustomModal>
 
-      {/* Logout Confirmation */}
       <ConfirmationModal
         visible={showLogoutModal}
-        title="Выход из аккаунта"
+        title="Выход"
         message="Вы уверены, что хотите выйти?"
         confirmText="Выйти"
         cancelText="Отмена"
@@ -357,127 +334,165 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: SPACING.l,
-  },
-  userCard: {
-    marginBottom: SPACING.l,
-  },
-  userInfo: {
-    flexDirection: 'row',
+  container: { flex: 1, backgroundColor: '#F4F6FA' },
+  scroll: { paddingBottom: SPACING.xl },
+
+  /* Hero */
+  hero: {
+    backgroundColor: COLORS.white,
     alignItems: 'center',
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.l,
+    paddingHorizontal: SPACING.l,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EAECF0',
   },
-  userAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.m,
-  },
-  userAvatarText: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: FONT_SIZES.l,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  userCity: {
-    fontSize: FONT_SIZES.s,
-    color: COLORS.gray,
-    marginBottom: SPACING.xs,
-  },
-  userPhone: {
-    fontSize: FONT_SIZES.s,
-    color: COLORS.gray,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: SPACING.m,
     marginBottom: SPACING.m,
   },
+  avatarText: { fontSize: FONT_SIZES.xxl, fontWeight: '800', color: COLORS.white },
+  heroName: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.s, textAlign: 'center' },
+  heroBadgeRow: { flexDirection: 'row', gap: SPACING.s, flexWrap: 'wrap', justifyContent: 'center' },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F4F6FA',
+    borderRadius: BORDER_RADIUS.round,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: 4,
+  },
+  heroBadgeText: { fontSize: FONT_SIZES.xs, color: COLORS.gray },
+
+  /* Stats strip */
+  statsCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.white,
+    marginHorizontal: SPACING.l,
+    marginTop: SPACING.l,
+    borderRadius: BORDER_RADIUS.xl,
+    paddingVertical: SPACING.m,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statItem: { flex: 1, alignItems: 'center', gap: 4 },
+  statDivider: { width: 1, backgroundColor: '#EAECF0', marginVertical: 4 },
+  statIcon: { width: 32, height: 32, borderRadius: BORDER_RADIUS.m, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  statValue: { fontSize: FONT_SIZES.m, fontWeight: '700', color: COLORS.text },
+  statLabel: { fontSize: 10, color: COLORS.gray, textAlign: 'center' },
+
+  /* Section */
+  section: { marginTop: SPACING.l, paddingHorizontal: SPACING.l },
+  sectionTitle: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '600',
+    color: COLORS.gray,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: SPACING.s,
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  /* Info rows */
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: SPACING.s,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  infoLabel: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.gray,
-  },
-  infoValue: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  statusBadge: {
     paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  statusText: {
-    fontSize: FONT_SIZES.s,
-    fontWeight: '600',
-  },
-  cardInfo: {
-    alignItems: 'center',
-  },
-  cardNumber: {
-    fontSize: FONT_SIZES.l,
-    color: COLORS.text,
-    fontWeight: '600',
-    marginBottom: SPACING.m,
-    letterSpacing: 2,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-  },
-  cardAction: {
-    flex: 1,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.m,
+    paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#F0F2F5',
   },
-  actionIcon: {
-    fontSize: FONT_SIZES.xl,
+  infoRowLast: { borderBottomWidth: 0 },
+  infoLabel: { fontSize: FONT_SIZES.s, color: COLORS.gray },
+  infoValue: { fontSize: FONT_SIZES.s, fontWeight: '500', color: COLORS.text, maxWidth: '55%', textAlign: 'right' },
+  statusBadge: { paddingHorizontal: SPACING.m, paddingVertical: 4, borderRadius: BORDER_RADIUS.round },
+  statusText: { fontSize: FONT_SIZES.xs, fontWeight: '600' },
+
+  /* Bank card */
+  bankCard: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.l,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  bankCardLabel: { fontSize: FONT_SIZES.xs, color: 'rgba(255,255,255,0.6)', marginBottom: 6 },
+  bankCardNumber: { fontSize: FONT_SIZES.l, fontWeight: '700', color: COLORS.white, letterSpacing: 2 },
+  bankCardEditBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardActions: { flexDirection: 'row', gap: SPACING.m, marginTop: SPACING.m },
+  cardAction: { flex: 1 },
+
+  /* Action rows */
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.m,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F2F5',
+  },
+  actionRowLast: { borderBottomWidth: 0 },
+  actionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: '#F4F6FA',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.m,
   },
-  actionText: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  logoutButton: {
+  actionLabel: { flex: 1, fontSize: FONT_SIZES.m, color: COLORS.text },
+
+  /* Logout */
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.s,
+    marginHorizontal: SPACING.l,
     marginTop: SPACING.l,
-    marginBottom: SPACING.xl,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    backgroundColor: COLORS.white,
   },
-  modalText: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.text,
-    lineHeight: 24,
-  },
-  referralLink: {
-    color: COLORS.info,
-    fontWeight: '600',
-  },
+  logoutText: { fontSize: FONT_SIZES.m, fontWeight: '600', color: COLORS.error },
+
+  /* Modals */
+  modalText: { fontSize: FONT_SIZES.m, color: COLORS.text, lineHeight: 24 },
+  referralBox: { backgroundColor: '#F4F6FA', borderRadius: BORDER_RADIUS.l, padding: SPACING.m, marginTop: SPACING.m },
+  referralCode: { fontSize: FONT_SIZES.s, color: COLORS.primary, fontWeight: '600' },
 });

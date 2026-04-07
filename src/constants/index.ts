@@ -91,7 +91,7 @@ export const FONT_SIZES = {
 export const MAIN_MENU_ITEMS: MenuItem[] = [
   {
     id: 'search_orders',
-    title: 'Поиск заказов',
+    title: 'Поиск заявок',
     icon: '🔍',
     screen: 'SearchOrders',
     color: COLORS.primary,

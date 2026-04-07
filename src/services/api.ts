@@ -88,52 +88,52 @@ class ApiService {
 
   // Profile endpoints
   async getMe() {
-    const response = await this.api.get<ApiResponse<any>>('/profile/me');
+    const response = await this.api.get<ApiResponse<any>>('/users/me');
     return response.data;
   }
 
   async getProfileAboutPanel() {
-    const response = await this.api.get<ApiResponse<any>>('/profile/me/about-panel');
+    const response = await this.api.get<ApiResponse<any>>('/users/me/about-panel');
     return response.data;
   }
 
   async getRating() {
-    const response = await this.api.get<ApiResponse<any>>('/profile/me/rating');
+    const response = await this.api.get<ApiResponse<any>>('/users/me/rating');
     return response.data;
   }
 
-  async updateBankCard(card: string) {
-    const response = await this.api.post<ApiResponse<void>>('/profile/me/bank-card', { card });
+  async updateBankCard(card: string, innLast4: string) {
+    const response = await this.api.post('/users/me/bank-card', { card, inn_last4: innLast4 });
     return response.data;
   }
 
   async requestCityChange(cityId: number) {
-    const response = await this.api.post<ApiResponse<void>>('/profile/me/change-city-request', { cityId });
+    const response = await this.api.post<ApiResponse<void>>('/users/me/change-city-request', { cityId });
     return response.data;
   }
 
   async updateSecurityData(data: any) {
-    const response = await this.api.post<ApiResponse<void>>('/profile/me/security-data', data);
+    const response = await this.api.post<ApiResponse<void>>('/users/me/security-data', data);
     return response.data;
   }
 
   async getReferralInfo() {
-    const response = await this.api.get<ApiResponse<any>>('/profile/me/referral-pack');
+    const response = await this.api.get<ApiResponse<any>>('/users/me/referral-pack');
     return response.data;
   }
 
   async createPayment(amount: number) {
-    const response = await this.api.post<ApiResponse<any>>('/profile/me/create-payment', { amount });
+    const response = await this.api.post<ApiResponse<any>>('/users/me/create-payment', { amount });
     return response.data;
   }
 
   async getPendingContracts() {
-    const response = await this.api.get<ApiResponse<any[]>>('/profile/me/pending-contracts');
+    const response = await this.api.get<ApiResponse<any[]>>('/users/me/pending-contracts');
     return response.data;
   }
 
   async ensureContracts(pin: string) {
-    const response = await this.api.post<ApiResponse<void>>('/profile/me/ensure-contracts', { pin });
+    const response = await this.api.post<ApiResponse<void>>('/users/me/ensure-contracts', { pin });
     return response.data;
   }
 

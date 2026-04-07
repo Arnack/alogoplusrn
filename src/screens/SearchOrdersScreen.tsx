@@ -103,7 +103,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
 
   return (
     <SafeView style={styles.container}>
-      <ScreenHeader title="Поиск заказов" onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Поиск заявок" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
