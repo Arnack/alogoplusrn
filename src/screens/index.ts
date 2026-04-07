@@ -1,9 +1,13 @@
 export { EntryScreen } from './EntryScreen';
 export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
-export { RegisterSelfEmployedQuestionScreen } from './RegisterSelfEmployedQuestionScreen';
-export { RegisterPersonalInfoScreen } from './RegisterPersonalInfoScreen';
-export { CitySelectionScreen } from './CitySelectionScreen';
+export { RegisterLastNameScreen } from './RegisterLastNameScreen';
+export { RegisterInnScreen } from './RegisterInnScreen';
+export { RegisterCardScreen } from './RegisterCardScreen';
+export { RegisterPhoneConfirmScreen } from './RegisterPhoneConfirmScreen';
+export { RegisterAgreementScreen } from './RegisterAgreementScreen';
+export { RegisterAgreementConfirmScreen } from './RegisterAgreementConfirmScreen';
+export { RegisterSuccessScreen } from './RegisterSuccessScreen';
 export { DashboardScreen } from './DashboardScreen';
 export { SearchOrdersScreen } from './SearchOrdersScreen';
 export { MyOrdersScreen } from './MyOrdersScreen';

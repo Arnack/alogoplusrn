@@ -24,86 +24,109 @@ type RootStackParamList = {
   Dashboard: undefined;
 };
 
-type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
+type RegisterCardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RegisterCard'>;
 
-type RegisterScreenProps = {
-  navigation: RegisterScreenNavigationProp;
-  route: RouteProp<RootStackParamList, 'Register'>;
+type RegisterCardProps = {
+  navigation: RegisterCardNavigationProp;
+  route: RouteProp<RootStackParamList, 'RegisterCard'>;
 };
 
-const CITIES = [
-  'Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань',
-  'Нижний Новгород', 'Челябинск', 'Самара', 'Омск', 'Ростов-на-Дону',
-  'Уфа', 'Красноярск', 'Воронеж', 'Пермь', 'Волгоград',
-  'Краснодар', 'Саратов', 'Тюмень', 'Тольятти', 'Ижевск',
-];
+const luhnCheck = (cardNumber: string): boolean => {
+  const digits = cardNumber.replace(/\D/g, '');
+  if (digits.length < 13 || digits.length > 19) return false;
 
-export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation, route }) => {
-  const { phone = '' } = route.params || {};
-  const [city, setCity] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  let sum = 0;
+  let isEven = false;
+
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let digit = parseInt(digits[i], 10);
+
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) {
+        digit -= 9;
+      }
+    }
+
+    sum += digit;
+    isEven = !isEven;
+  }
+
+  return sum % 10 === 0;
+};
+
+export const RegisterCardScreen: React.FC<RegisterCardProps> = ({ navigation, route }) => {
+  const params = route.params || {};
+  const { phone = '', city = '', lastName = '', firstName = '', middleName = '', inn = '' } = params;
+  const [card, setCard] = useState('');
   const [loading, setLoading] = useState(false);
-  const { error, ToastContainer } = useToast();
+  const { error, success, ToastContainer } = useToast();
 
-  const filteredCities = CITIES.filter(c =>
-    c.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const formatCardNumber = (text: string) => {
+    const cleaned = text.replace(/\D/g, '');
+    const formatted = cleaned.replace(/(\d{4})/g, '$1 ').trim();
+    return formatted;
+  };
+
+  const handleCardChange = (text: string) => {
+    const formatted = formatCardNumber(text);
+    if (formatted.length <= 23) {
+      setCard(formatted);
+    }
+  };
 
   const handleContinue = () => {
-    if (!city) {
-      error('Выберите город');
+    const cardDigits = card.replace(/\D/g, '');
+    if (cardDigits.length < 16 || cardDigits.length > 19) {
+      error('Введите корректный номер карты (16-19 цифр)');
       return;
     }
-    navigation.navigate('RegisterLastName', { phone, city });
+    if (!luhnCheck(cardDigits)) {
+      error('Некорректный номер карты');
+      return;
+    }
+
+    navigation.navigate('RegisterPhoneConfirm', {
+      phone, city, lastName, firstName, middleName, inn, card: cardDigits,
+    });
   };
 
   return (
     <SafeView style={styles.container}>
-      <ScreenHeader title="Регистрация" onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Банковская карта" onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>Выберите ваш город</Text>
+          <Text style={styles.subtitle}>Шаг 3 из 5</Text>
 
           <View style={styles.content}>
             <Input
-              label="Поиск города"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Начните вводить город"
+              label="Номер карты *"
+              value={card}
+              onChangeText={handleCardChange}
+              placeholder="0000 0000 0000 0000"
+              keyboardType="number-pad"
+              maxLength={23}
+              hint="Для вывода средств. Минимальная сумма вывода — 2600₽"
             />
+          </View>
 
-            <ScrollView style={styles.cityList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-              {filteredCities.length === 0 && (
-                <Text style={styles.noCities}>Город не найден</Text>
-              )}
-              {filteredCities.map((c) => (
-                <View
-                  key={c}
-                  style={[
-                    styles.cityItem,
-                    city === c && styles.cityItemSelected,
-                  ]}
-                >
-                  <Button
-                    title={c}
-                    onPress={() => setCity(c)}
-                    variant={city === c ? 'primary' : 'outline'}
-                    fullWidth
-                    size="medium"
-                  />
-                </View>
-              ))}
-            </ScrollView>
-
+          <View style={styles.buttonContainer}>
             <Button
-              title="Продолжить"
+              title="Далее →"
               onPress={handleContinue}
               loading={loading}
               fullWidth
               size="large"
+            />
+
+            <Button
+              title="← Назад"
+              onPress={() => navigation.goBack()}
+              variant="outline"
+              fullWidth
               style={styles.button}
             />
           </View>
@@ -138,23 +161,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  cityList: {
-    maxHeight: 300,
-    marginBottom: SPACING.m,
-  },
-  cityItem: {
-    marginBottom: SPACING.xs,
-  },
-  cityItemSelected: {
-    // handled by button variant
-  },
   button: {
     marginTop: SPACING.s,
   },
-  noCities: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.gray,
-    textAlign: 'center',
-    paddingVertical: SPACING.l,
+  buttonContainer: {
+    marginTop: SPACING.l,
   },
 });

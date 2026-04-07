@@ -10,6 +10,7 @@ import {
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, MAIN_MENU_ITEMS } from '../constants';
 import { StatCard, Card } from '../components/Card';
 import { LoadingScreen } from '../components/Loading';
+import { SafeView } from '../components/SafeView';
 import { apiService } from '../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -92,7 +93,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
   }
 
   return (
-    <View style={styles.container}>
+    <SafeView style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Добро пожаловать</Text>
@@ -168,7 +169,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
           ))}
         </View>
       </ScrollView>
-    </View>
+    </SafeView>
   );
 };
 

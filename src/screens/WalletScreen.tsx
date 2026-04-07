@@ -12,6 +12,8 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { LoadingScreen } from '../components/Loading';
 import { ConfirmationModal } from '../components/Modal';
+import { SafeView } from '../components/SafeView';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { apiService } from '../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -112,10 +114,8 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Кошелёк</Text>
-      </View>
+    <SafeView style={styles.container}>
+      <ScreenHeader title="Кошелёк" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -245,7 +245,7 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({ navigation }) => {
       />
 
       <ToastContainer />
-    </View>
+    </SafeView>
   );
 };
 
@@ -253,18 +253,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    padding: SPACING.l,
-    paddingTop: SPACING.xl,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
-    color: COLORS.primary,
   },
   scrollContent: {
     padding: SPACING.l,

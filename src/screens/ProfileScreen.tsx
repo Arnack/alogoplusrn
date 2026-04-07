@@ -14,6 +14,8 @@ import { Input } from '../components/Input';
 import { LoadingScreen } from '../components/Loading';
 import { CustomModal } from '../components/Modal';
 import { ConfirmationModal } from '../components/Modal';
+import { SafeView } from '../components/SafeView';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { apiService } from '../services/api';
 import { storage } from '../utils/storage';
@@ -120,10 +122,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Профиль</Text>
-      </View>
+    <SafeView style={styles.container}>
+      <ScreenHeader title="Профиль" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -352,7 +352,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       />
 
       <ToastContainer />
-    </View>
+    </SafeView>
   );
 };
 
@@ -360,18 +360,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    padding: SPACING.l,
-    paddingTop: SPACING.xl,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
-    color: COLORS.primary,
   },
   scrollContent: {
     padding: SPACING.l,

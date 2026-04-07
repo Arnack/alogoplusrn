@@ -11,6 +11,8 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingScreen } from '../components/Loading';
+import { SafeView } from '../components/SafeView';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { apiService } from '../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -126,17 +128,11 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Уведомления</Text>
-          {unreadCount > 0 && (
-            <Text style={styles.unreadCount}>
-              {unreadCount} непрочитанных
-            </Text>
-          )}
-        </View>
-        {unreadCount > 0 && (
+    <SafeView style={styles.container}>
+      <ScreenHeader
+        title="Уведомления"
+        onBack={() => navigation.goBack()}
+        right={unreadCount > 0 ? (
           <Button
             title="Прочитать все"
             onPress={markAllRead}
@@ -144,8 +140,8 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
             variant="outline"
             size="small"
           />
-        )}
-      </View>
+        ) : undefined}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -204,7 +200,7 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
         )}
       </ScrollView>
       <ToastContainer />
-    </View>
+    </SafeView>
   );
 };
 
@@ -212,22 +208,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SPACING.l,
-    paddingTop: SPACING.xl,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: SPACING.xs,
   },
   unreadCount: {
     fontSize: FONT_SIZES.s,

@@ -4,6 +4,8 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { useToast } from '../components/Toast';
+import { SafeView } from '../components/SafeView';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { apiService } from '../services/api';
 import { storage } from '../utils/storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,7 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 type RootStackParamList = {
   Entry: undefined;
   Login: undefined;
-  Register: { phone: string; city: string };
+  Register: { phone: string };
   RegisterSelfEmployedQuestion: { phone: string };
   RegisterPersonalInfo: { phone: string; city: string };
   CitySelection: { phone: string };
@@ -97,15 +99,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Вход</Text>
-          <Text style={styles.subtitle}>Введите телефон и 4 цифры ИНН</Text>
-        </View>
+    <SafeView style={styles.container}>
+      <ScreenHeader title="Вход" onBack={() => navigation.goBack()} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.subtitle}>Введите телефон и 4 цифры ИНН</Text>
 
         <View style={styles.content}>
           <Input
@@ -137,15 +138,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
           <Button
             title="Регистрация"
-            onPress={() => navigation.navigate('Entry')}
+            onPress={() => navigation.navigate('Register', { phone: '' })}
             variant="outline"
             fullWidth
             style={styles.registerButton}
           />
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <ToastContainer />
-    </KeyboardAvoidingView>
+    </SafeView>
   );
 };
 
@@ -159,19 +161,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: SPACING.l,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.xxl,
-  },
-  title: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: SPACING.xs,
-  },
   subtitle: {
     fontSize: FONT_SIZES.l,
     color: COLORS.gray,
+    marginBottom: SPACING.l,
   },
   content: {
     backgroundColor: COLORS.white,

@@ -12,6 +12,8 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingScreen } from '../components/Loading';
 import { ConfirmationModal } from '../components/Modal';
+import { SafeView } from '../components/SafeView';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { apiService } from '../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -197,10 +199,8 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Мои заказы</Text>
-      </View>
+    <SafeView style={styles.container}>
+      <ScreenHeader title="Мои заказы" onBack={() => navigation.goBack()} />
 
       {/* Tabs */}
       <View style={styles.tabs}>
@@ -294,7 +294,7 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
       />
 
       <ToastContainer />
-    </View>
+    </SafeView>
   );
 };
 
@@ -302,18 +302,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    padding: SPACING.l,
-    paddingTop: SPACING.xl,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
-    color: COLORS.primary,
   },
   tabs: {
     flexDirection: 'row',

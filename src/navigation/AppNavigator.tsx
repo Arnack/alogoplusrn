@@ -7,9 +7,13 @@ import { StatusBar } from 'expo-status-bar';
 import { EntryScreen } from '../screens/EntryScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
-import { RegisterSelfEmployedQuestionScreen } from '../screens/RegisterSelfEmployedQuestionScreen';
-import { RegisterPersonalInfoScreen } from '../screens/RegisterPersonalInfoScreen';
-import { CitySelectionScreen } from '../screens/CitySelectionScreen';
+import { RegisterLastNameScreen } from '../screens/RegisterLastNameScreen';
+import { RegisterInnScreen } from '../screens/RegisterInnScreen';
+import { RegisterCardScreen } from '../screens/RegisterCardScreen';
+import { RegisterPhoneConfirmScreen } from '../screens/RegisterPhoneConfirmScreen';
+import { RegisterAgreementScreen } from '../screens/RegisterAgreementScreen';
+import { RegisterAgreementConfirmScreen } from '../screens/RegisterAgreementConfirmScreen';
+import { RegisterSuccessScreen } from '../screens/RegisterSuccessScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SearchOrdersScreen } from '../screens/SearchOrdersScreen';
 import { MyOrdersScreen } from '../screens/MyOrdersScreen';
@@ -24,10 +28,15 @@ import { COLORS } from '../constants';
 export type RootStackParamList = {
   Entry: undefined;
   Login: undefined;
-  Register: { phone: string; city: string };
-  RegisterSelfEmployedQuestion: { phone: string };
-  RegisterPersonalInfo: { phone: string; city: string };
-  CitySelection: { phone: string };
+  Register: { phone: string };
+  RegisterCity: { phone: string };
+  RegisterLastName: { phone: string; city: string };
+  RegisterInn: { phone: string; city: string; lastName: string; firstName: string; middleName: string };
+  RegisterCard: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string };
+  RegisterPhoneConfirm: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string; card: string };
+  RegisterAgreement: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string; card: string };
+  RegisterAgreementConfirm: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string; card: string };
+  RegisterSuccess: undefined;
   Dashboard: undefined;
   SearchOrders: undefined;
   MyOrders: undefined;
@@ -50,15 +59,18 @@ export const AppNavigator: React.FC = () => {
             backgroundColor: COLORS.background,
           },
           animation: 'slide_from_right',
-          statusBarStyle: 'dark',
         }}
       >
         <Stack.Screen name="Entry" component={EntryScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="RegisterSelfEmployedQuestion" component={RegisterSelfEmployedQuestionScreen} />
-        <Stack.Screen name="RegisterPersonalInfo" component={RegisterPersonalInfoScreen} />
-        <Stack.Screen name="CitySelection" component={CitySelectionScreen} />
+        <Stack.Screen name="RegisterLastName" component={RegisterLastNameScreen} />
+        <Stack.Screen name="RegisterInn" component={RegisterInnScreen} />
+        <Stack.Screen name="RegisterCard" component={RegisterCardScreen} />
+        <Stack.Screen name="RegisterPhoneConfirm" component={RegisterPhoneConfirmScreen} />
+        <Stack.Screen name="RegisterAgreement" component={RegisterAgreementScreen} />
+        <Stack.Screen name="RegisterAgreementConfirm" component={RegisterAgreementConfirmScreen} />
+        <Stack.Screen name="RegisterSuccess" component={RegisterSuccessScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="SearchOrders" component={SearchOrdersScreen} />
         <Stack.Screen name="MyOrders" component={MyOrdersScreen} />

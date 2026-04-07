@@ -24,86 +24,67 @@ type RootStackParamList = {
   Dashboard: undefined;
 };
 
-type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
+type RegisterInnNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RegisterInn'>;
 
-type RegisterScreenProps = {
-  navigation: RegisterScreenNavigationProp;
-  route: RouteProp<RootStackParamList, 'Register'>;
+type RegisterInnProps = {
+  navigation: RegisterInnNavigationProp;
+  route: RouteProp<RootStackParamList, 'RegisterInn'>;
 };
 
-const CITIES = [
-  'Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань',
-  'Нижний Новгород', 'Челябинск', 'Самара', 'Омск', 'Ростов-на-Дону',
-  'Уфа', 'Красноярск', 'Воронеж', 'Пермь', 'Волгоград',
-  'Краснодар', 'Саратов', 'Тюмень', 'Тольятти', 'Ижевск',
-];
-
-export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation, route }) => {
-  const { phone = '' } = route.params || {};
-  const [city, setCity] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+export const RegisterInnScreen: React.FC<RegisterInnProps> = ({ navigation, route }) => {
+  const params = route.params || {};
+  const { phone = '', city = '', lastName = '', firstName = '', middleName = '' } = params;
+  const [inn, setInn] = useState('');
   const [loading, setLoading] = useState(false);
   const { error, ToastContainer } = useToast();
 
-  const filteredCities = CITIES.filter(c =>
-    c.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const handleContinue = () => {
-    if (!city) {
-      error('Выберите город');
+    if (inn.length !== 12) {
+      error('ИНН должен содержать 12 цифр');
       return;
     }
-    navigation.navigate('RegisterLastName', { phone, city });
+
+    navigation.navigate('RegisterCard', {
+      phone, city, lastName, firstName, middleName, inn,
+    });
   };
 
   return (
     <SafeView style={styles.container}>
-      <ScreenHeader title="Регистрация" onBack={() => navigation.goBack()} />
+      <ScreenHeader title="ИНН" onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>Выберите ваш город</Text>
+          <Text style={styles.subtitle}>Шаг 2 из 5</Text>
 
           <View style={styles.content}>
             <Input
-              label="Поиск города"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Начните вводить город"
+              label="ИНН *"
+              value={inn}
+              onChangeText={(text) => setInn(text.replace(/\D/g, '').slice(0, 12))}
+              placeholder="12 цифр"
+              keyboardType="number-pad"
+              maxLength={12}
+              hint="Ваш идентификационный номер налогоплательщика"
             />
+          </View>
 
-            <ScrollView style={styles.cityList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-              {filteredCities.length === 0 && (
-                <Text style={styles.noCities}>Город не найден</Text>
-              )}
-              {filteredCities.map((c) => (
-                <View
-                  key={c}
-                  style={[
-                    styles.cityItem,
-                    city === c && styles.cityItemSelected,
-                  ]}
-                >
-                  <Button
-                    title={c}
-                    onPress={() => setCity(c)}
-                    variant={city === c ? 'primary' : 'outline'}
-                    fullWidth
-                    size="medium"
-                  />
-                </View>
-              ))}
-            </ScrollView>
-
+          <View style={styles.buttonContainer}>
             <Button
-              title="Продолжить"
+              title="Далее →"
               onPress={handleContinue}
               loading={loading}
               fullWidth
               size="large"
+            />
+
+            <Button
+              title="← Назад"
+              onPress={() => navigation.goBack()}
+              variant="outline"
+              fullWidth
               style={styles.button}
             />
           </View>
@@ -138,23 +119,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  cityList: {
-    maxHeight: 300,
-    marginBottom: SPACING.m,
-  },
-  cityItem: {
-    marginBottom: SPACING.xs,
-  },
-  cityItemSelected: {
-    // handled by button variant
-  },
   button: {
     marginTop: SPACING.s,
   },
-  noCities: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.gray,
-    textAlign: 'center',
-    paddingVertical: SPACING.l,
+  buttonContainer: {
+    marginTop: SPACING.l,
   },
 });

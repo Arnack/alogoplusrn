@@ -10,6 +10,8 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Card, StatCard } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingScreen } from '../components/Loading';
+import { SafeView } from '../components/SafeView';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { apiService } from '../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -109,10 +111,8 @@ export const PromotionsScreen: React.FC<PromotionsScreenProps> = ({ navigation }
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Акции и бонусы</Text>
-      </View>
+    <SafeView style={styles.container}>
+      <ScreenHeader title="Акции и бонусы" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -239,7 +239,7 @@ export const PromotionsScreen: React.FC<PromotionsScreenProps> = ({ navigation }
         </Card>
       </ScrollView>
       <ToastContainer />
-    </View>
+    </SafeView>
   );
 };
 
@@ -247,18 +247,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    padding: SPACING.l,
-    paddingTop: SPACING.xl,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
-    color: COLORS.primary,
   },
   scrollContent: {
     padding: SPACING.l,
