@@ -177,7 +177,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const stats = [
     { label: 'Баланс', value: `${panel?.balance ?? 0} ₽`, icon: 'cash-outline' as const, color: '#27AE60', bg: '#EAFAF1' },
-    { label: 'Рейтинг', value: panel?.rating ?? '—', icon: 'star-outline' as const, color: '#F39C12', bg: '#FEF9E7' },
+    { 
+      label: 'Рейтинг', 
+      value: panel?.rating != null ? Math.floor(panel.rating) : '—', 
+      icon: 'star-outline' as const, 
+      color: '#F39C12', 
+      bg: '#FEF9E7' 
+    },
     { label: 'Заказов', value: String(panel?.total_orders ?? 0), icon: 'briefcase-outline' as const, color: '#4A90D9', bg: '#EBF4FF' },
     { label: 'Выполнено', value: String(panel?.successful_orders ?? 0), icon: 'checkmark-circle-outline' as const, color: '#7B68EE', bg: '#F0EEFF' },
   ];
