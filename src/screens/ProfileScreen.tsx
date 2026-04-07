@@ -137,7 +137,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       try {
         const result = await apiService.getCities();
         const data = (result as any)?.data ?? result;
-        if (Array.isArray(data)) setCities(data.map((c: any) => ({ id: c.id, name: c.name })));
+        if (Array.isArray(data)) setCities(data.filter((c: any) => c.id && c.name).map((c: any) => ({ id: c.id, name: c.name })));
       } catch {
         error('Не удалось загрузить города');
       } finally {
@@ -376,7 +376,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <ScrollView style={styles.cityList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
           {cityLoading ? (
             <Text style={styles.cityModalHint}>Загрузка...</Text>
-          ) : cities.filter(c => c.name.toLowerCase().includes(citySearch.toLowerCase())).map((c) => (
+          ) : cities.filter(c => c.name?.toLowerCase().includes(citySearch.toLowerCase())).map((c) => (
             <View key={c.id} style={styles.cityItem}>
               <Button
                 title={c.name}

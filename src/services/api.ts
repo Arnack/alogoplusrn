@@ -108,7 +108,7 @@ class ApiService {
   }
 
   async requestCityChange(cityId: number) {
-    const response = await this.api.post<ApiResponse<void>>('/users/me/change-city-request', { cityId });
+    const response = await this.api.post<ApiResponse<void>>('/users/me/change-city-request', { city_id: cityId });
     return response.data;
   }
 
