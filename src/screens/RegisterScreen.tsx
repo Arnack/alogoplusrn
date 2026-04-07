@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
@@ -6,6 +6,7 @@ import { Input } from '../components/Input';
 import { SafeView } from '../components/SafeView';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
+import { apiService } from '../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
@@ -31,21 +32,22 @@ type RegisterScreenProps = {
   route: RouteProp<RootStackParamList, 'Register'>;
 };
 
-const CITIES = [
-  'Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань',
-  'Нижний Новгород', 'Челябинск', 'Самара', 'Омск', 'Ростов-на-Дону',
-  'Уфа', 'Красноярск', 'Воронеж', 'Пермь', 'Волгоград',
-  'Краснодар', 'Саратов', 'Тюмень', 'Тольятти', 'Ижевск',
-];
-
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation, route }) => {
   const { phone = '' } = route.params || {};
   const [city, setCity] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cities, setCities] = useState<string[]>([]);
   const { error, ToastContainer } = useToast();
 
-  const filteredCities = CITIES.filter(c =>
+  useEffect(() => {
+    apiService.getCities().then((result: any) => {
+      const data = result?.data ?? result;
+      if (Array.isArray(data)) setCities(data.map((c: any) => c.name));
+    }).catch(() => {});
+  }, []);
+
+  const filteredCities = cities.filter(c =>
     c.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

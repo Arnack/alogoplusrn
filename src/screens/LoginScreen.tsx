@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { useToast } from '../components/Toast';
 import { SafeView } from '../components/SafeView';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { CustomModal } from '../components/Modal';
 import { apiService } from '../services/api';
 import { storage } from '../utils/storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,13 +32,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [innLast4, setInnLast4] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [cities, setCities] = useState<string[]>([]);
+  const [citySearch, setCitySearch] = useState('');
   const { success, error, ToastContainer } = useToast();
 
   useEffect(() => {
     storage.getCity().then((c) => {
       if (c) setCity(c);
     });
+    apiService.getCities().then((result: any) => {
+      const data = result?.data ?? result;
+      if (Array.isArray(data)) setCities(data.map((c: any) => c.name));
+    }).catch(() => {});
   }, []);
+
+  const filteredCities = cities.filter(c =>
+    c.toLowerCase().includes(citySearch.toLowerCase())
+  );
+
+  const handleSelectCity = async (c: string) => {
+    setCity(c);
+    await storage.setCity(c);
+    setCityModalVisible(false);
+    setCitySearch('');
+  };
 
   const formatPhone = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
@@ -83,8 +102,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     try {
       const response = await apiService.loginPhone(`+${cleanPhone}`, cleanInnLast4, city);
 
-      await storage.setToken(response.data.token);
-      await storage.setUser(JSON.stringify(response.data.user));
+      await storage.setToken(response.access_token);
+      try {
+        const me = await apiService.getMe();
+        await storage.setUser(JSON.stringify(me));
+      } catch {}
 
       success('Вы успешно вошли');
       navigation.reset({
@@ -128,6 +150,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             hint="Указан при регистрации"
           />
 
+          <TouchableOpacity style={styles.cityPicker} onPress={() => setCityModalVisible(true)}>
+            <Text style={styles.cityPickerLabel}>Город</Text>
+            <Text style={[styles.cityPickerValue, !city && styles.cityPickerPlaceholder]}>
+              {city || 'Выберите город'}
+            </Text>
+          </TouchableOpacity>
+
           <Button
             title="Войти"
             onPress={handleLogin}
@@ -147,6 +176,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
       <ToastContainer />
+
+      <CustomModal
+        visible={cityModalVisible}
+        onClose={() => { setCityModalVisible(false); setCitySearch(''); }}
+        title="Выберите город"
+      >
+        <Input
+          label=""
+          value={citySearch}
+          onChangeText={setCitySearch}
+          placeholder="Поиск города"
+        />
+        <ScrollView style={styles.cityList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+          {filteredCities.map((c) => (
+            <View key={c} style={styles.cityItem}>
+              <Button
+                title={c}
+                onPress={() => handleSelectCity(c)}
+                variant={city === c ? 'primary' : 'outline'}
+                fullWidth
+                size="medium"
+              />
+            </View>
+          ))}
+        </ScrollView>
+      </CustomModal>
     </SafeView>
   );
 };
@@ -178,5 +233,31 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginTop: SPACING.m,
+  },
+  cityPicker: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+    marginBottom: SPACING.m,
+  },
+  cityPickerLabel: {
+    fontSize: FONT_SIZES.s,
+    color: COLORS.gray,
+    marginBottom: 4,
+  },
+  cityPickerValue: {
+    fontSize: FONT_SIZES.m,
+    color: COLORS.text,
+  },
+  cityPickerPlaceholder: {
+    color: COLORS.gray,
+  },
+  cityList: {
+    maxHeight: 300,
+    marginTop: SPACING.s,
+  },
+  cityItem: {
+    marginBottom: SPACING.xs,
   },
 });

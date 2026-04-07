@@ -73,7 +73,7 @@ class ApiService {
   }
 
   async loginPhone(phone: string, innLast4: string, city: string) {
-    const response = await this.api.post<ApiResponse<{ token: string; user: any }>>('/auth/login-phone', {
+    const response = await this.api.post<{ access_token: string; token_type: string; expires_in: number }>('/auth/login-phone', {
       phone,
       inn_last4: innLast4,
       city,
