@@ -42,8 +42,8 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      const response = await apiService.getNotifications();
-      setNotifications(response.data ?? []);
+      const data = await apiService.getNotifications();
+      setNotifications(Array.isArray(data) ? data : (data as any)?.data || []);
     } catch (err: any) {
       error('Ошибка загрузки уведомлений');
     } finally {

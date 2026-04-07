@@ -42,8 +42,8 @@ export const PromotionsScreen: React.FC<PromotionsScreenProps> = ({ navigation }
   const loadPromotions = async () => {
     setLoading(true);
     try {
-      const response = await apiService.getPromotions();
-      setPromotions(response.data);
+      const data = await apiService.getPromotions();
+      setPromotions(Array.isArray(data) ? data : (data as any)?.data || []);
       // In real app, load bonuses too
       setBonuses([]);
     } catch (err: any) {
