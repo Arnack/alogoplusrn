@@ -72,7 +72,7 @@ export const RegisterPhoneConfirmScreen: React.FC<RegisterPhoneConfirmProps> = (
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>Шаг 4 из 5</Text>
+          <Text style={styles.subtitle}>Шаг 5 из 5</Text>
 
           <View style={styles.content}>
             <Text style={styles.phoneText}>{phone}</Text>

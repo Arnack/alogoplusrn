@@ -13,104 +13,76 @@ type RootStackParamList = {
   Entry: undefined;
   Login: undefined;
   Register: { phone: string };
-  RegisterCity: { phone: string };
   RegisterLastName: { phone: string; city: string };
   RegisterInn: { phone: string; city: string; lastName: string; firstName: string; middleName: string };
   RegisterCard: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string };
   RegisterPhone: { city: string; lastName: string; firstName: string; middleName: string; inn: string; card: string };
   RegisterPhoneConfirm: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string; card: string };
   RegisterAgreement: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string; card: string };
-  RegisterAgreementConfirm: { phone: string; city: string; lastName: string; firstName: string; middleName: string; inn: string; card: string };
   RegisterSuccess: undefined;
   Dashboard: undefined;
 };
 
-type RegisterCardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RegisterCard'>;
+type RegisterPhoneNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RegisterPhone'>;
 
-type RegisterCardProps = {
-  navigation: RegisterCardNavigationProp;
-  route: RouteProp<RootStackParamList, 'RegisterCard'>;
+type RegisterPhoneProps = {
+  navigation: RegisterPhoneNavigationProp;
+  route: RouteProp<RootStackParamList, 'RegisterPhone'>;
 };
 
-const luhnCheck = (cardNumber: string): boolean => {
-  const digits = cardNumber.replace(/\D/g, '');
-  if (digits.length < 13 || digits.length > 19) return false;
-
-  let sum = 0;
-  let isEven = false;
-
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let digit = parseInt(digits[i], 10);
-
-    if (isEven) {
-      digit *= 2;
-      if (digit > 9) {
-        digit -= 9;
-      }
-    }
-
-    sum += digit;
-    isEven = !isEven;
-  }
-
-  return sum % 10 === 0;
-};
-
-export const RegisterCardScreen: React.FC<RegisterCardProps> = ({ navigation, route }) => {
-  const params = route.params || {};
-  const { phone = '', city = '', lastName = '', firstName = '', middleName = '', inn = '' } = params;
-  const [card, setCard] = useState('');
+export const RegisterPhoneScreen: React.FC<RegisterPhoneProps> = ({ navigation, route }) => {
+  const { city = '', lastName = '', firstName = '', middleName = '', inn = '', card = '' } = route.params || {};
+  const [phone, setPhone] = useState('+7');
   const [loading, setLoading] = useState(false);
-  const { error, success, ToastContainer } = useToast();
+  const { error, ToastContainer } = useToast();
 
-  const formatCardNumber = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    const formatted = cleaned.replace(/(\d{4})/g, '$1 ').trim();
-    return formatted;
+  const formatPhone = (text: string): string => {
+    let digits = text.replace(/\D/g, '');
+    if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
+    digits = digits.slice(0, 10);
+    let result = '+7';
+    if (digits.length > 0) result += ' ' + digits.slice(0, 3);
+    if (digits.length > 3) result += ' ' + digits.slice(3, 6);
+    if (digits.length > 6) result += ' ' + digits.slice(6, 8);
+    if (digits.length > 8) result += ' ' + digits.slice(8, 10);
+    return result;
   };
 
-  const handleCardChange = (text: string) => {
-    const formatted = formatCardNumber(text);
-    if (formatted.length <= 23) {
-      setCard(formatted);
-    }
+  const handlePhoneChange = (text: string) => {
+    setPhone(formatPhone(text));
   };
 
   const handleContinue = () => {
-    const cardDigits = card.replace(/\D/g, '');
-    if (cardDigits.length < 16 || cardDigits.length > 19) {
-      error('Введите корректный номер карты (16-19 цифр)');
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 11) {
+      error('Введите корректный номер телефона');
       return;
     }
-    if (!luhnCheck(cardDigits)) {
-      error('Некорректный номер карты');
-      return;
-    }
-
-    navigation.navigate('RegisterPhone', {
-      city, lastName, firstName, middleName, inn, card: cardDigits,
+    navigation.navigate('RegisterPhoneConfirm', {
+      phone: `+${digits}`,
+      city, lastName, firstName, middleName, inn, card,
     });
   };
 
   return (
     <SafeView style={styles.container}>
-      <ScreenHeader title="Банковская карта" onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Номер телефона" onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>Шаг 3 из 5</Text>
+          <Text style={styles.subtitle}>Шаг 4 из 5</Text>
 
           <View style={styles.content}>
             <Input
-              label="Номер карты *"
-              value={card}
-              onChangeText={handleCardChange}
-              placeholder="0000 0000 0000 0000"
-              keyboardType="number-pad"
-              maxLength={23}
-              hint="Для вывода средств. Минимальная сумма вывода — 2600₽"
+              label="Номер телефона *"
+              value={phone}
+              onChangeText={handlePhoneChange}
+              placeholder="+7 9XX XXX XX XX"
+              keyboardType="phone-pad"
+              maxLength={16}
+              hint="На этот номер придёт SMS с кодом"
             />
           </View>
 

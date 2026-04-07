@@ -50,6 +50,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [showReferral, setShowReferral] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
+  const [cities, setCities] = useState<{ id: number; name: string }[]>([]);
+  const [citySearch, setCitySearch] = useState('');
+  const [cityLoading, setCityLoading] = useState(false);
   const { success, error, ToastContainer } = useToast();
 
   const loadProfile = useCallback(async () => {
@@ -125,6 +129,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  const handleOpenCityModal = async () => {
+    setShowCityModal(true);
+    setCitySearch('');
+    if (cities.length === 0) {
+      setCityLoading(true);
+      try {
+        const result = await apiService.getCities();
+        const data = (result as any)?.data ?? result;
+        if (Array.isArray(data)) setCities(data.map((c: any) => ({ id: c.id, name: c.name })));
+      } catch {
+        error('Не удалось загрузить города');
+      } finally {
+        setCityLoading(false);
+      }
+    }
+  };
+
+  const handleSelectCity = async (cityId: number, cityName: string) => {
+    try {
+      await apiService.requestCityChange(cityId);
+      success(`Запрос на смену города «${cityName}» отправлен`);
+      setShowCityModal(false);
+    } catch (err: any) {
+      error(err.message || 'Ошибка отправки запроса');
+    }
+  };
+
   const handleLogout = async () => {
     try { await apiService.logout(); } catch {}
     await storage.clearAll();
@@ -156,7 +187,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     { label: 'Телефон (факт.)', value: panel?.phone_actual || '—' },
     { label: 'ФИО (реестр)', value: panel?.fio_registry || '—' },
     { label: 'ФИО (факт.)', value: panel?.fio_actual || '—' },
-    { label: 'Город', value: panel?.city || '—' },
     { label: 'ИНН', value: me?.inn_masked || '—' },
   ];
 
@@ -221,12 +251,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Личные данные</Text>
           <View style={styles.card}>
-            {infoRows.map((row, i) => (
-              <View key={row.label} style={[styles.infoRow, i === infoRows.length - 1 && styles.infoRowLast]}>
+            {infoRows.map((row) => (
+              <View key={row.label} style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{row.label}</Text>
                 <Text style={styles.infoValue} numberOfLines={1}>{row.value}</Text>
               </View>
             ))}
+            <TouchableOpacity style={styles.infoRow} onPress={handleOpenCityModal} activeOpacity={0.7}>
+              <Text style={styles.infoLabel}>Город</Text>
+              <View style={styles.infoValueRow}>
+                <Text style={[styles.infoValue, { maxWidth: undefined }]}>{panel?.city || '—'}</Text>
+                <Ionicons name="pencil-outline" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
+              </View>
+            </TouchableOpacity>
             <View style={[styles.infoRow, styles.infoRowLast]}>
               <Text style={styles.infoLabel}>Статус</Text>
               <View style={[styles.statusBadge, { backgroundColor: panel?.in_rr ? '#EAFAF1' : '#FDEDEC' }]}>
@@ -320,6 +357,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <Text style={styles.referralCode}>{referralLink}</Text>
           </View>
         ) : null}
+      </CustomModal>
+
+      <CustomModal
+        visible={showCityModal}
+        onClose={() => { setShowCityModal(false); setCitySearch(''); }}
+        title="Сменить город"
+      >
+        <Text style={styles.cityModalHint}>
+          Запрос будет отправлен менеджеру на подтверждение
+        </Text>
+        <Input
+          label=""
+          value={citySearch}
+          onChangeText={setCitySearch}
+          placeholder="Поиск города"
+        />
+        <ScrollView style={styles.cityList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+          {cityLoading ? (
+            <Text style={styles.cityModalHint}>Загрузка...</Text>
+          ) : cities.filter(c => c.name.toLowerCase().includes(citySearch.toLowerCase())).map((c) => (
+            <View key={c.id} style={styles.cityItem}>
+              <Button
+                title={c.name}
+                onPress={() => handleSelectCity(c.id, c.name)}
+                variant={panel?.city === c.name ? 'primary' : 'outline'}
+                fullWidth
+                size="medium"
+              />
+            </View>
+          ))}
+        </ScrollView>
       </CustomModal>
 
       <ConfirmationModal
@@ -429,6 +497,7 @@ const styles = StyleSheet.create({
   infoRowLast: { borderBottomWidth: 0 },
   infoLabel: { fontSize: FONT_SIZES.s, color: COLORS.gray },
   infoValue: { fontSize: FONT_SIZES.s, fontWeight: '500', color: COLORS.text, maxWidth: '55%', textAlign: 'right' },
+  infoValueRow: { flexDirection: 'row', alignItems: 'center' },
   statusBadge: { paddingHorizontal: SPACING.m, paddingVertical: 4, borderRadius: BORDER_RADIUS.round },
   statusText: { fontSize: FONT_SIZES.xs, fontWeight: '600' },
 
@@ -495,6 +564,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   logoutText: { fontSize: FONT_SIZES.m, fontWeight: '600', color: COLORS.error },
+
+  /* City modal */
+  cityModalHint: { fontSize: FONT_SIZES.s, color: COLORS.gray, marginBottom: SPACING.m, textAlign: 'center' },
+  cityList: { maxHeight: 300, marginTop: SPACING.xs },
+  cityItem: { marginBottom: SPACING.xs },
 
   /* Modals */
   modalText: { fontSize: FONT_SIZES.m, color: COLORS.text, lineHeight: 24 },

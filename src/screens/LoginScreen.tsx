@@ -28,7 +28,7 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+7');
   const [innLast4, setInnLast4] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,25 +58,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setCitySearch('');
   };
 
-  const formatPhone = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
-    if (match) {
-      let result = '+7';
-      if (match[2]) result += ` ${match[2]}`;
-      if (match[3]) result += ` ${match[3]}`;
-      if (match[4]) result += ` ${match[4]}`;
-      if (match[5]) result += ` ${match[5]}`;
-      return result;
-    }
-    return text;
+  const formatPhone = (text: string): string => {
+    let digits = text.replace(/\D/g, '');
+    if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
+    digits = digits.slice(0, 10);
+    let result = '+7';
+    if (digits.length > 0) result += ' ' + digits.slice(0, 3);
+    if (digits.length > 3) result += ' ' + digits.slice(3, 6);
+    if (digits.length > 6) result += ' ' + digits.slice(6, 8);
+    if (digits.length > 8) result += ' ' + digits.slice(8, 10);
+    return result;
   };
 
   const handlePhoneChange = (text: string) => {
-    const formatted = formatPhone(text);
-    if (formatted.length <= 18) {
-      setPhone(formatted);
-    }
+    setPhone(formatPhone(text));
   };
 
   const handleLogin = async () => {
@@ -135,9 +130,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             label="Номер телефона"
             value={phone}
             onChangeText={handlePhoneChange}
-            placeholder="+7 ___ ___ __ __"
+            placeholder="+7 9XX XXX XX XX"
             keyboardType="phone-pad"
-            maxLength={18}
+            maxLength={16}
           />
 
           <Input
