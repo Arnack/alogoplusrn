@@ -46,12 +46,10 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({ navigation }) => {
 
   const loadWalletData = async () => {
     try {
-      const [profileResponse] = await Promise.all([
-        apiService.getMe(),
-      ]);
-      
-      setBalance(profileResponse.data.balance || 0);
-      // In real app, we'd load payment history and wallet payments
+      const panel = await apiService.getProfileAboutPanel();
+      const panelData = (panel as any)?.data || panel;
+      const raw: string = panelData?.balance || '0';
+      setBalance(parseFloat(raw.replace(',', '.')) || 0);
       setPaymentHistory([]);
       setWalletPayments([]);
     } catch (err: any) {

@@ -48,9 +48,10 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
   const loadMyOrders = async () => {
     setLoading(true);
     try {
-      const response = await apiService.getMyOrders();
-      setApplications(response.data.applications || []);
-      setAssignedOrders(response.data.assigned || []);
+      const data = await apiService.getMyOrders();
+      const items: any[] = Array.isArray(data) ? data : (data as any)?.data || [];
+      setApplications(items.filter((i: any) => i.kind === 'application'));
+      setAssignedOrders(items.filter((i: any) => i.kind === 'assigned'));
     } catch (err: any) {
       error('Ошибка загрузки заказов');
     } finally {
@@ -94,34 +95,31 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
     }
   };
 
-  const getShiftColor = (shift: string) => {
-    return shift === 'day' ? COLORS.day : COLORS.night;
+  const getShiftLabel = (order: any) => {
+    if (order.day_shift) return `День  ${order.day_shift}`;
+    if (order.night_shift) return `Ночь  ${order.night_shift}`;
+    return '—';
+  };
+
+  const getShiftColor = (order: any) => {
+    return order.day_shift ? COLORS.day : COLORS.night;
   };
 
   const renderOrderCard = (order: any, isApplication: boolean) => {
     return (
-      <Card key={order.id} style={styles.orderCard}>
+      <Card key={order.order_id} style={styles.orderCard}>
         <View style={styles.orderHeader}>
-          <View>
-            <Text style={styles.orderCustomer}>{order.customerName}</Text>
-            <Text style={styles.orderJob}>{order.jobName}</Text>
+          <View style={{ flex: 1, marginRight: SPACING.s }}>
+            <Text style={styles.orderCustomer}>{order.organization || '—'}</Text>
+            <Text style={styles.orderJob}>{order.job_name}</Text>
           </View>
           <View
             style={[
               styles.statusBadge,
-              {
-                backgroundColor: isApplication ? COLORS.info + '20' : COLORS.success + '20',
-              },
+              { backgroundColor: isApplication ? COLORS.info + '20' : COLORS.success + '20' },
             ]}
           >
-            <Text
-              style={[
-                styles.statusText,
-                {
-                  color: isApplication ? COLORS.info : COLORS.success,
-                },
-              ]}
-            >
+            <Text style={[styles.statusText, { color: isApplication ? COLORS.info : COLORS.success }]}>
               {isApplication ? 'Заявка' : 'Назначен'}
             </Text>
           </View>
@@ -130,20 +128,13 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
         <View style={styles.orderDetails}>
           <View style={styles.orderDetail}>
             <Text style={styles.orderDetailLabel}>Дата</Text>
-            <Text style={styles.orderDetailValue}>{order.date}</Text>
+            <Text style={styles.orderDetailValue}>{order.date}{order.day_of_week ? `, ${order.day_of_week}` : ''}</Text>
           </View>
           <View style={styles.orderDetail}>
             <Text style={styles.orderDetailLabel}>Смена</Text>
-            <View
-              style={[
-                styles.shiftBadge,
-                { backgroundColor: getShiftColor(order.shift) + '20' },
-              ]}
-            >
-              <Text
-                style={[styles.shiftBadgeText, { color: getShiftColor(order.shift) }]}
-              >
-                {order.shift === 'day' ? 'День' : 'Ночь'}
+            <View style={[styles.shiftBadge, { backgroundColor: getShiftColor(order) + '20' }]}>
+              <Text style={[styles.shiftBadgeText, { color: getShiftColor(order) }]}>
+                {getShiftLabel(order)}
               </Text>
             </View>
           </View>
@@ -154,7 +145,7 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
           <View style={styles.orderDetail}>
             <Text style={styles.orderDetailLabel}>Оплата</Text>
             <Text style={[styles.orderDetailValue, styles.orderAmount]}>
-              {order.adjustedAmount || order.amount} ₽
+              {order.amount_adjusted || '—'} ₽
             </Text>
           </View>
         </View>
@@ -163,7 +154,7 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
           <Button
             title="Отозвать заявку"
             onPress={() => {
-              setWithdrawingId(order.id);
+              setWithdrawingId(order.order_id);
               setShowWithdrawModal(true);
             }}
             variant="outline"
@@ -176,7 +167,7 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
             <Button
               title="Отказаться"
               onPress={() => {
-                setRefusingId(order.id);
+                setRefusingId(order.order_id);
                 setShowRefuseModal(true);
               }}
               variant="outline"

@@ -123,7 +123,7 @@ class ApiService {
   }
 
   async createPayment(amount: number) {
-    const response = await this.api.post<ApiResponse<any>>('/users/me/create-payment', { amount });
+    const response = await this.api.post<ApiResponse<any>>('/users/me/create-payment', { amount: String(amount) });
     return response.data;
   }
 
