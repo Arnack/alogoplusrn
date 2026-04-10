@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -135,7 +138,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
       // Always show contract signing modal first
       setApplyingOrderId(null);
       
-      // Load contract PDF
+      // Load contract PDF from local assets
       setContractSign({
         visible: true,
         pin: '',
@@ -148,14 +151,18 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
       });
 
       try {
-        const pdfBlob = await apiService.getContractTemplate();
-        const pdfUrl = URL.createObjectURL(pdfBlob);
+        // Load local PDF from assets
+        const asset = Asset.fromModule(require('../../assets/pdf/agreement.pdf'));
+        await asset.downloadAsync();
+        const localUri = asset.localUri || asset.uri;
+        
         setContractSign(prev => ({
           ...prev,
-          contractPdfUrl: pdfUrl,
+          contractPdfUrl: localUri,
           contractLoading: false,
         }));
       } catch (pdfErr) {
+        console.error('Failed to load PDF:', pdfErr);
         // If PDF fails to load, still show the modal but without PDF
         setContractSign(prev => ({
           ...prev,
@@ -182,11 +189,6 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
       
       // Mark contracts as signed in local storage
       await storage.set('has_signed_contracts', 'true');
-      
-      // Clean up PDF URL
-      if (contractSign.contractPdfUrl) {
-        URL.revokeObjectURL(contractSign.contractPdfUrl);
-      }
 
       // Close contract modal
       const orderId = contractSign.pendingOrderId;
@@ -359,9 +361,6 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
 
       {/* Contract Signing Modal */}
       <Modal visible={contractSign.visible} transparent animationType="fade" onRequestClose={() => {
-        if (contractSign.contractPdfUrl) {
-          URL.revokeObjectURL(contractSign.contractPdfUrl);
-        }
         setContractSign(prev => ({ ...prev, visible: false }));
       }}>
         <View style={styles.contractModalOverlay}>
@@ -373,9 +372,6 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
               <View style={styles.contractModalHeader}>
                 <Text style={styles.contractModalTitle}>Подписание договора</Text>
                 <TouchableOpacity onPress={() => {
-                  if (contractSign.contractPdfUrl) {
-                    URL.revokeObjectURL(contractSign.contractPdfUrl);
-                  }
                   setContractSign(prev => ({ ...prev, visible: false }));
                 }}>
                   <Ionicons name="close" size={24} color={COLORS.white} />
@@ -393,15 +389,26 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                     <Text style={styles.contractLoadingText}>Загрузка договора PDF...</Text>
                   </View>
                 ) : contractSign.contractPdfUrl ? (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.contractDownloadBox}
                     activeOpacity={0.7}
+                    onPress={async () => {
+                      try {
+                        await Sharing.shareAsync(contractSign.contractPdfUrl!, {
+                          mimeType: 'application/pdf',
+                          UTI: 'com.adobe.pdf',
+                        });
+                      } catch (err) {
+                        error('Не удалось открыть PDF');
+                      }
+                    }}
                   >
-                    <Ionicons name="download-outline" size={28} color={COLORS.primary} />
+                    <Ionicons name="document-text-outline" size={28} color={COLORS.primary} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.contractDownloadText}>Скачать договор PDF</Text>
-                      <Text style={styles.contractDownloadHint}>Ознакомьтесь с договором перед подписанием</Text>
+                      <Text style={styles.contractDownloadText}>Открыть договор PDF</Text>
+                      <Text style={styles.contractDownloadHint}>Нажмите для просмотра документа</Text>
                     </View>
+                    <Ionicons name="open-outline" size={24} color={COLORS.gray} />
                   </TouchableOpacity>
                 ) : null}
 
@@ -464,7 +471,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                 </View>
 
                 <Button
-                  title="Подтвердить принятие Заявки"
+                  title="Подтвердить"
                   onPress={handleContractSign}
                   loading={contractSign.loading}
                   fullWidth
