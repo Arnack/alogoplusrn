@@ -132,8 +132,18 @@ class ApiService {
     return (response.data as any)?.data ?? response.data;
   }
 
-  async ensureContracts(pin: string) {
-    const response = await this.api.post<ApiResponse<void>>('/users/me/ensure-contracts', { pin });
+  async ensureContracts(pinType: string, pinValue: string) {
+    const response = await this.api.post<ApiResponse<void>>('/users/me/ensure-contracts', { 
+      pin_type: pinType, 
+      pin_value: pinValue 
+    });
+    return response.data;
+  }
+
+  async getContractTemplate(): Promise<Blob> {
+    const response = await this.api.get('/users/me/contract-template', {
+      responseType: 'blob',
+    });
     return response.data;
   }
 

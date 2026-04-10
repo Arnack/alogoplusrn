@@ -219,7 +219,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const actions = [
     { icon: 'document-text-outline' as const, label: 'Правила', onPress: handleOpenRules },
     { icon: 'gift-outline' as const, label: 'Реферальная программа', onPress: handleOpenReferral },
-    { icon: 'chatbubble-outline' as const, label: 'Поддержка', onPress: () => navigation.navigate('Support') },
+    { icon: 'chatbubble-outline' as const, label: 'Связь с руководством', onPress: () => navigation.navigate('Support') },
     { icon: 'trash-outline' as const, label: 'Удалить данные', onPress: () => navigation.navigate('RemoveAccount'), danger: true },
   ];
 

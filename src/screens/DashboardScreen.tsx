@@ -33,7 +33,7 @@ interface DashboardScreenProps {
 
 const MENU_ITEMS = [
   { id: 'search_orders', title: 'Поиск заявок', icon: 'search-outline' as const, screen: 'SearchOrders', color: '#4A90D9', bg: '#EBF4FF' },
-  { id: 'my_orders', title: 'Мои заказы', icon: 'document-text-outline' as const, screen: 'MyOrders', color: '#7B68EE', bg: '#F0EEFF' },
+  { id: 'my_orders', title: 'Управление заявками', icon: 'document-text-outline' as const, screen: 'MyOrders', color: '#7B68EE', bg: '#F0EEFF' },
   { id: 'wallet', title: 'Кошелёк', icon: 'wallet-outline' as const, screen: 'Wallet', color: '#27AE60', bg: '#EAFAF1' },
   { id: 'profile', title: 'Профиль', icon: 'person-outline' as const, screen: 'Profile', color: '#E67E22', bg: '#FEF5E7' },
   { id: 'notifications', title: 'Уведомления', icon: 'notifications-outline' as const, screen: 'Notifications', color: '#E74C3C', bg: '#FDEDEC' },

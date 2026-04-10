@@ -89,4 +89,29 @@ export const storage = {
       console.error('Error clearing storage:', error);
     }
   },
+
+  async get(key: string): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.error(`Error getting ${key}:`, error);
+      return null;
+    }
+  },
+
+  async set(key: string, value: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (error) {
+      console.error(`Error setting ${key}:`, error);
+    }
+  },
+
+  async remove(key: string): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing ${key}:`, error);
+    }
+  },
 };

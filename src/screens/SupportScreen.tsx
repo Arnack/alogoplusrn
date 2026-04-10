@@ -160,7 +160,7 @@ export const SupportScreen: React.FC<SupportScreenProps> = ({ navigation }) => {
 
   return (
     <SafeView style={styles.container}>
-      <ScreenHeader title="Поддержка" onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Связь с руководством" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

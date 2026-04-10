@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Card } from '../components/Card';
@@ -9,6 +9,7 @@ import { SafeView } from '../components/SafeView';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { apiService } from '../services/api';
+import { storage } from '../utils/storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
@@ -48,17 +49,15 @@ interface OrderItem {
   travel_compensation_rub: number | null;
 }
 
-interface ConfirmState {
-  orderId: number;
-  summaryHtml: string;
-  messageHtml: string;
-}
-
 interface ContractSignState {
   visible: boolean;
   pin: string;
   loading: boolean;
   pendingOrderId: number | null;
+  pinType: string;
+  pinHint: string;
+  contractPdfUrl: string | null;
+  contractLoading: boolean;
 }
 
 function stripHtml(html: string): string {
@@ -81,13 +80,16 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [applyingOrderId, setApplyingOrderId] = useState<number | null>(null);
-  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [contractSign, setContractSign] = useState<ContractSignState>({
     visible: false,
     pin: '',
     loading: false,
     pendingOrderId: null,
+    pinType: 'inn',
+    pinHint: '',
+    contractPdfUrl: null,
+    contractLoading: false,
   });
   const { success, error, ToastContainer } = useToast();
 
@@ -130,33 +132,39 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
   const handleApplyPress = async (orderId: number) => {
     setApplyingOrderId(orderId);
     try {
-      // Check for pending contracts first
-      const pendingContracts = await apiService.getPendingContracts();
-      const contracts = (pendingContracts as any)?.data ?? pendingContracts;
+      // Always show contract signing modal first
+      setApplyingOrderId(null);
       
-      if (contracts && Array.isArray(contracts) && contracts.length > 0) {
-        // User has unsigned contracts - need to sign first
-        setApplyingOrderId(null);
-        setContractSign({
-          visible: true,
-          pin: '',
-          loading: false,
-          pendingOrderId: orderId,
-        });
-        return;
-      }
-
-      // No pending contracts, proceed with application
-      const preview = await apiService.getOrderApplyPreview(orderId);
-      const previewData = (preview as any)?.data || preview;
-      setConfirm({
-        orderId,
-        summaryHtml: previewData?.order_summary_html || '',
-        messageHtml: previewData?.message_html || '',
+      // Load contract PDF
+      setContractSign({
+        visible: true,
+        pin: '',
+        loading: false,
+        pendingOrderId: orderId,
+        pinType: 'inn',
+        pinHint: 'последние 4 цифры ИНН, день и месяц рождения, год рождения или последние 4 цифры паспорта',
+        contractPdfUrl: null,
+        contractLoading: true,
       });
+
+      try {
+        const pdfBlob = await apiService.getContractTemplate();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        setContractSign(prev => ({
+          ...prev,
+          contractPdfUrl: pdfUrl,
+          contractLoading: false,
+        }));
+      } catch (pdfErr) {
+        // If PDF fails to load, still show the modal but without PDF
+        setContractSign(prev => ({
+          ...prev,
+          contractLoading: false,
+        }));
+        error('Не удалось загрузить договор PDF, но вы можете продолжить');
+      }
     } catch (err: any) {
       error(err.message || 'Ошибка загрузки');
-    } finally {
       setApplyingOrderId(null);
     }
   };
@@ -169,44 +177,39 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
 
     setContractSign(prev => ({ ...prev, loading: true }));
     try {
-      await apiService.ensureContracts(contractSign.pin);
-      success('Договор подписан');
+      // Sign contracts
+      await apiService.ensureContracts(contractSign.pinType, contractSign.pin);
       
-      // Now proceed with the order application
+      // Mark contracts as signed in local storage
+      await storage.set('has_signed_contracts', 'true');
+      
+      // Clean up PDF URL
+      if (contractSign.contractPdfUrl) {
+        URL.revokeObjectURL(contractSign.contractPdfUrl);
+      }
+
+      // Close contract modal
       const orderId = contractSign.pendingOrderId;
-      setContractSign({ visible: false, pin: '', loading: false, pendingOrderId: null });
-      
+      setContractSign({ visible: false, pin: '', loading: false, pendingOrderId: null, pinType: 'inn', pinHint: '', contractPdfUrl: null, contractLoading: false });
+
+      // Auto-accept the order after successful contract signing
       if (orderId) {
-        const preview = await apiService.getOrderApplyPreview(orderId);
-        const previewData = (preview as any)?.data || preview;
-        setConfirm({
-          orderId,
-          summaryHtml: previewData?.order_summary_html || '',
-          messageHtml: previewData?.message_html || '',
-        });
+        setApplyingOrderId(orderId);
+        await apiService.createOrderApplication(orderId);
+        success('✓ Заявка принята');
+        setApplyingOrderId(null);
+        
+        // Refresh orders list
+        if (selectedCustomer) {
+          await loadOrders(selectedCustomer);
+          await loadCustomers();
+        }
       }
     } catch (err: any) {
       error(err.message || 'Ошибка подписания договора');
     } finally {
+      setApplyingOrderId(null);
       setContractSign(prev => ({ ...prev, loading: false }));
-    }
-  };
-
-  const handleConfirm = async () => {
-    if (!confirm) return;
-    setConfirming(true);
-    try {
-      await apiService.createOrderApplication(confirm.orderId);
-      success('Заявка принята');
-      setConfirm(null);
-      if (selectedCustomer) {
-        await loadOrders(selectedCustomer);
-        await loadCustomers();
-      }
-    } catch (err: any) {
-      error(err.message || 'Ошибка при отклике');
-    } finally {
-      setConfirming(false);
     }
   };
 
@@ -354,72 +357,123 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
         )}
       </ScrollView>
 
-      {/* Confirmation Modal */}
-      <Modal visible={confirm !== null} transparent animationType="fade" onRequestClose={() => setConfirm(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Подтверждение</Text>
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              {confirm?.summaryHtml ? (
-                <Text style={styles.modalSummary}>{stripHtml(confirm.summaryHtml)}</Text>
-              ) : null}
-              {confirm?.messageHtml ? (
-                <Text style={styles.modalMessage}>{stripHtml(confirm.messageHtml)}</Text>
-              ) : null}
-            </ScrollView>
-            <View style={styles.modalButtons}>
-              <Button
-                title="Отмена"
-                variant="outline"
-                onPress={() => setConfirm(null)}
-                style={styles.modalBtn}
-              />
-              <Button
-                title="Подтвердить"
-                onPress={handleConfirm}
-                loading={confirming}
-                style={styles.modalBtn}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       {/* Contract Signing Modal */}
-      <Modal visible={contractSign.visible} transparent animationType="slide" onRequestClose={() => setContractSign(prev => ({ ...prev, visible: false }))}>
+      <Modal visible={contractSign.visible} transparent animationType="fade" onRequestClose={() => {
+        if (contractSign.contractPdfUrl) {
+          URL.revokeObjectURL(contractSign.contractPdfUrl);
+        }
+        setContractSign(prev => ({ ...prev, visible: false }));
+      }}>
         <View style={styles.contractModalOverlay}>
-          <View style={styles.contractModalBox}>
-            <View style={styles.contractModalHeader}>
-              <Text style={styles.contractModalTitle}>Подписание договора</Text>
-              <TouchableOpacity onPress={() => setContractSign(prev => ({ ...prev, visible: false }))}>
-                <Ionicons name="close" size={24} color={COLORS.white} />
-              </TouchableOpacity>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.contractKeyboardAvoid}
+          >
+            <View style={styles.contractModalBox}>
+              <View style={styles.contractModalHeader}>
+                <Text style={styles.contractModalTitle}>Подписание договора</Text>
+                <TouchableOpacity onPress={() => {
+                  if (contractSign.contractPdfUrl) {
+                    URL.revokeObjectURL(contractSign.contractPdfUrl);
+                  }
+                  setContractSign(prev => ({ ...prev, visible: false }));
+                }}>
+                  <Ionicons name="close" size={24} color={COLORS.white} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView 
+                style={styles.contractModalScroll} 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {/* Contract PDF Download Button */}
+                {contractSign.contractLoading ? (
+                  <View style={styles.contractLoadingBox}>
+                    <Text style={styles.contractLoadingText}>Загрузка договора PDF...</Text>
+                  </View>
+                ) : contractSign.contractPdfUrl ? (
+                  <TouchableOpacity 
+                    style={styles.contractDownloadBox}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="download-outline" size={28} color={COLORS.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.contractDownloadText}>Скачать договор PDF</Text>
+                      <Text style={styles.contractDownloadHint}>Ознакомьтесь с договором перед подписанием</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : null}
+
+                {/* Contract Text - Exact text from Telegram bot */}
+                <View style={styles.contractTextBox}>
+                  <Text style={styles.contractTextBlock}>
+                    📄 Для принятия Заявки необходимо заключить гражданско-правовой договор.
+                  </Text>
+                  
+                  <Text style={styles.contractTextBlock}>
+                    Подписание осуществляется вводом 4 цифр одного из ваших идентификаторов.
+                    {'\n'}Способ выбирается случайно: последние 4 цифры ИНН, день и месяц рождения, год рождения или последние 4 цифры паспорта.
+                  </Text>
+
+                  <Text style={styles.contractTextBlock}>
+                    Подписывая договор и принимая Заявку, вы подтверждаете, что:
+                  </Text>
+                  
+                  <Text style={styles.contractBulletPoint}>
+                    • действуете добровольно, самостоятельно и в своих интересах;
+                  </Text>
+                  <Text style={styles.contractBulletPoint}>
+                    • принимаете обязательство по оказанию услуг в рамках гражданско-правового договора;
+                  </Text>
+                  <Text style={styles.contractBulletPoint}>
+                    • не состоите в трудовых отношениях с Платформой и/или третьими лицами по данной Заявке;
+                  </Text>
+                  <Text style={styles.contractBulletPoint}>
+                    • ознакомлены и согласны с условиями Заявки и договора.
+                  </Text>
+
+                  <Text style={styles.contractTextBlock}>
+                    Подтверждение распространяется сразу на 3 договора с юридическими лицами Платформы.
+                    {'\n'}При выплате останется рабочим только договор выбранного юрлица.
+                  </Text>
+
+                  <Text style={styles.contractWarningText}>
+                    ❗ Без подписания договора принятие Заявки невозможно.
+                  </Text>
+                </View>
+
+                {/* Divider */}
+                <View style={styles.contractDivider} />
+
+                {/* PIN Input Section */}
+                <Text style={styles.contractPinTitle}>
+                  Введите 4 последние цифры ИНН:
+                </Text>
+                <View style={styles.contractPinInputWrapper}>
+                  <TextInput
+                    style={styles.contractPinInput}
+                    value={contractSign.pin}
+                    onChangeText={(text) => setContractSign(prev => ({ ...prev, pin: text.replace(/\D/g, '').slice(0, 4) }))}
+                    placeholder="••••"
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    textAlign="center"
+                    placeholderTextColor={COLORS.gray}
+                  />
+                </View>
+
+                <Button
+                  title="Подтвердить принятие Заявки"
+                  onPress={handleContractSign}
+                  loading={contractSign.loading}
+                  fullWidth
+                  size="large"
+                  style={styles.contractSubmitBtn}
+                />
+              </ScrollView>
             </View>
-            
-            <ScrollView style={styles.contractModalScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.contractInfoText}>
-                Перед взятием заявки необходимо подписать договор. Введите последние 4 цифры вашего ИНН для подтверждения подписи.
-              </Text>
-
-              <TextInput
-                style={styles.contractPinInput}
-                value={contractSign.pin}
-                onChangeText={(text) => setContractSign(prev => ({ ...prev, pin: text.replace(/\D/g, '').slice(0, 4) }))}
-                placeholder="••••"
-                keyboardType="number-pad"
-                maxLength={4}
-                textAlign="center"
-              />
-
-              <Button
-                title="Подписать договор"
-                onPress={handleContractSign}
-                loading={contractSign.loading}
-                fullWidth
-                size="large"
-              />
-            </ScrollView>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -606,64 +660,29 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.m,
     lineHeight: 18,
   },
-  modalOverlay: {
+  contractModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.l,
   },
-  modalBox: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
+  contractKeyboardAvoid: {
+    flex: 1,
+    justifyContent: 'center',
     width: '100%',
-    maxHeight: '80%',
-    padding: SPACING.l,
-  },
-  modalTitle: {
-    fontSize: FONT_SIZES.l,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: SPACING.m,
-  },
-  modalScroll: {
-    maxHeight: 300,
-    marginBottom: SPACING.m,
-  },
-  modalSummary: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.text,
-    lineHeight: 22,
-    marginBottom: SPACING.m,
-  },
-  modalMessage: {
-    fontSize: FONT_SIZES.s,
-    color: COLORS.gray,
-    lineHeight: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-  },
-  modalBtn: {
-    flex: 1,
-  },
-  contractModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    maxHeight: '90%',
   },
   contractModalBox: {
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: BORDER_RADIUS.xl,
-    borderTopRightRadius: BORDER_RADIUS.xl,
-    maxHeight: '70%',
+    borderRadius: BORDER_RADIUS.xl,
+    width: '100%',
+    maxHeight: '90%',
+    overflow: 'hidden',
   },
   contractModalHeader: {
     backgroundColor: COLORS.primary,
     padding: SPACING.l,
-    borderTopLeftRadius: BORDER_RADIUS.xl,
-    borderTopRightRadius: BORDER_RADIUS.xl,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -675,13 +694,76 @@ const styles = StyleSheet.create({
   },
   contractModalScroll: {
     padding: SPACING.l,
+    paddingTop: SPACING.m,
   },
-  contractInfoText: {
+  contractLoadingBox: {
+    padding: SPACING.l,
+    alignItems: 'center',
+    marginBottom: SPACING.l,
+  },
+  contractLoadingText: {
+    fontSize: FONT_SIZES.m,
+    color: COLORS.gray,
+  },
+  contractDownloadBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary + '10',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.l,
+    marginBottom: SPACING.l,
+    gap: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+  },
+  contractDownloadText: {
+    fontSize: FONT_SIZES.m,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: 2,
+  },
+  contractDownloadHint: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.gray,
+  },
+  contractTextBox: {
+    marginBottom: SPACING.l,
+  },
+  contractTextBlock: {
     fontSize: FONT_SIZES.m,
     color: COLORS.text,
-    lineHeight: 22,
-    marginBottom: SPACING.l,
+    lineHeight: 24,
+    marginBottom: SPACING.m,
+  },
+  contractBulletPoint: {
+    fontSize: FONT_SIZES.m,
+    color: COLORS.text,
+    lineHeight: 24,
+    marginLeft: SPACING.m,
+    marginBottom: SPACING.xs,
+  },
+  contractWarningText: {
+    fontSize: FONT_SIZES.m,
+    fontWeight: '600',
+    color: COLORS.error,
+    marginTop: SPACING.m,
+    marginBottom: SPACING.m,
+    lineHeight: 24,
+  },
+  contractDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: SPACING.l,
+  },
+  contractPinTitle: {
+    fontSize: FONT_SIZES.l,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.m,
     textAlign: 'center',
+  },
+  contractPinInputWrapper: {
+    marginBottom: SPACING.l,
   },
   contractPinInput: {
     fontSize: FONT_SIZES.xxxl,
@@ -689,9 +771,13 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    marginBottom: SPACING.l,
-    borderWidth: 1,
+    paddingVertical: SPACING.l,
+    paddingHorizontal: SPACING.xl,
+    borderWidth: 2,
     borderColor: COLORS.border,
+    letterSpacing: 8,
+  },
+  contractSubmitBtn: {
+    marginTop: SPACING.m,
   },
 });

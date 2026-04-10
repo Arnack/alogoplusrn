@@ -102,7 +102,7 @@ export const MAIN_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: 'my_orders',
-    title: 'Мои заказы',
+    title: 'Управление заявками',
     icon: '📋',
     screen: 'MyOrders',
     color: COLORS.info,

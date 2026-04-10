@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHIFT_TIMES } from '../constants';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingScreen } from '../components/Loading';
@@ -31,14 +31,10 @@ interface MyOrdersScreenProps {
 
 export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) => {
   const [applications, setApplications] = useState<any[]>([]);
-  const [assignedOrders, setAssignedOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'applications' | 'assigned'>('applications');
   const [withdrawingId, setWithdrawingId] = useState<number | null>(null);
-  const [refusingId, setRefusingId] = useState<number | null>(null);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [showRefuseModal, setShowRefuseModal] = useState(false);
   const { success, error, ToastContainer } = useToast();
 
   useEffect(() => {
@@ -50,10 +46,10 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
     try {
       const data = await apiService.getMyOrders();
       const items: any[] = Array.isArray(data) ? data : (data as any)?.data || [];
+      // Only show applications (not assigned orders)
       setApplications(items.filter((i: any) => i.kind === 'application'));
-      setAssignedOrders(items.filter((i: any) => i.kind === 'assigned'));
     } catch (err: any) {
-      error('Ошибка загрузки заказов');
+      error('Ошибка загрузки заявок');
     } finally {
       setLoading(false);
     }
@@ -67,7 +63,7 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
 
   const handleWithdrawApplication = async () => {
     if (!withdrawingId) return;
-    
+
     try {
       await apiService.withdrawApplication(withdrawingId);
       success('Заявка отозвана');
@@ -77,21 +73,6 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
     } finally {
       setWithdrawingId(null);
       setShowWithdrawModal(false);
-    }
-  };
-
-  const handleRefuseAssignment = async () => {
-    if (!refusingId) return;
-    
-    try {
-      await apiService.refuseAssignment(refusingId);
-      success('Отказ от заказа');
-      await loadMyOrders();
-    } catch (err: any) {
-      error(err.message);
-    } finally {
-      setRefusingId(null);
-      setShowRefuseModal(false);
     }
   };
 
@@ -109,7 +90,13 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
     return COLORS.weekday;
   };
 
-  const renderOrderCard = (order: any, isApplication: boolean) => {
+  const renderOrderCard = (order: any) => {
+    // Determine status: if added_by_manager is true, it's approved, otherwise moderation
+    const isApproved = order.added_by_manager === true;
+    const statusLabel = isApproved ? 'Одобрен' : 'Модерация';
+    const statusColor = isApproved ? COLORS.success : COLORS.warning;
+    const statusBg = isApproved ? COLORS.success + '20' : COLORS.warning + '20';
+
     return (
       <Card key={order.order_id} style={styles.orderCard}>
         <View style={styles.orderHeader}>
@@ -120,11 +107,11 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
           <View
             style={[
               styles.statusBadge,
-              { backgroundColor: isApplication ? COLORS.info + '20' : COLORS.success + '20' },
+              { backgroundColor: statusBg },
             ]}
           >
-            <Text style={[styles.statusText, { color: isApplication ? COLORS.info : COLORS.success }]}>
-              {isApplication ? 'Заявка' : 'Назначен'}
+            <Text style={[styles.statusText, { color: statusColor }]}>
+              {statusLabel}
             </Text>
           </View>
         </View>
@@ -159,84 +146,26 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
           </View>
         </View>
 
-        {isApplication && (
-          <Button
-            title="Отозвать заявку"
-            onPress={() => {
-              setWithdrawingId(order.order_id);
-              setShowWithdrawModal(true);
-            }}
-            variant="outline"
-            fullWidth
-          />
-        )}
-
-        {!isApplication && (
-          <View style={styles.assignedActions}>
-            <Button
-              title="Отказаться"
-              onPress={() => {
-                setRefusingId(order.order_id);
-                setShowRefuseModal(true);
-              }}
-              variant="outline"
-              style={styles.assignedAction}
-            />
-            <Button
-              title="Подписать акт"
-              onPress={() => success('Функция подписания акта')}
-              variant="primary"
-              style={styles.assignedAction}
-            />
-          </View>
-        )}
+        <Button
+          title="Отозвать заявку"
+          onPress={() => {
+            setWithdrawingId(order.order_id);
+            setShowWithdrawModal(true);
+          }}
+          variant="outline"
+          fullWidth
+        />
       </Card>
     );
   };
 
   if (loading) {
-    return <LoadingScreen text="Загрузка заказов..." />;
+    return <LoadingScreen text="Загрузка заявок..." />;
   }
 
   return (
     <SafeView style={styles.container}>
-      <ScreenHeader title="Мои заказы" onBack={() => navigation.goBack()} />
-
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'applications' && styles.tabActive,
-          ]}
-          onPress={() => setActiveTab('applications')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'applications' && styles.tabTextActive,
-            ]}
-          >
-            Заявки
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'assigned' && styles.tabActive,
-          ]}
-          onPress={() => setActiveTab('assigned')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'assigned' && styles.tabTextActive,
-            ]}
-          >
-            Назначенные
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="Управление заявками" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -250,22 +179,12 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
         }
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === 'applications' ? (
-          applications.length === 0 ? (
-            <Card>
-              <Text style={styles.emptyText}>Нет заявок</Text>
-            </Card>
-          ) : (
-            applications.map((app) => renderOrderCard(app, true))
-          )
+        {applications.length === 0 ? (
+          <Card>
+            <Text style={styles.emptyText}>Нет заявок</Text>
+          </Card>
         ) : (
-          assignedOrders.length === 0 ? (
-            <Card>
-              <Text style={styles.emptyText}>Нет назначенных заказов</Text>
-            </Card>
-          ) : (
-            assignedOrders.map((order) => renderOrderCard(order, false))
-          )
+          applications.map((app) => renderOrderCard(app))
         )}
       </ScrollView>
 
@@ -281,18 +200,6 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
         variant="danger"
       />
 
-      {/* Refuse Confirmation Modal */}
-      <ConfirmationModal
-        visible={showRefuseModal}
-        title="Отказаться от заказа"
-        message="Вы уверены, что хотите отказаться от заказа? Это повлечёт штрафные санкции."
-        confirmText="Отказаться"
-        cancelText="Отмена"
-        onConfirm={handleRefuseAssignment}
-        onCancel={() => setShowRefuseModal(false)}
-        variant="danger"
-      />
-
       <ToastContainer />
     </SafeView>
   );
@@ -302,30 +209,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: SPACING.m,
-    alignItems: 'center',
-  },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.primary,
-  },
-  tabText: {
-    fontSize: FONT_SIZES.m,
-    color: COLORS.gray,
-    fontWeight: '500',
-  },
-  tabTextActive: {
-    color: COLORS.primary,
-    fontWeight: '600',
   },
   scrollContent: {
     padding: SPACING.l,
@@ -358,10 +241,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.m,
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.round,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statusText: {
     fontSize: FONT_SIZES.s,
     fontWeight: '600',
+    textAlignVertical: 'center',
   },
   orderDetails: {
     flexDirection: 'row',
@@ -396,12 +282,5 @@ const styles = StyleSheet.create({
   shiftBadgeText: {
     fontSize: FONT_SIZES.s,
     fontWeight: '600',
-  },
-  assignedActions: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-  },
-  assignedAction: {
-    flex: 1,
   },
 });
