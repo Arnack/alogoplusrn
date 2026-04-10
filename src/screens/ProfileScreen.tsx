@@ -24,6 +24,8 @@ type RootStackParamList = {
   Dashboard: undefined;
   Login: undefined;
   Profile: undefined;
+  RemoveAccount: undefined;
+  Support: undefined;
 };
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
@@ -54,6 +56,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [cities, setCities] = useState<{ id: number; name: string }[]>([]);
   const [citySearch, setCitySearch] = useState('');
   const [cityLoading, setCityLoading] = useState(false);
+  const [cityChangeLoading, setCityChangeLoading] = useState(false);
+  const [cityChangeTargetName, setCityChangeTargetName] = useState<string | null>(null);
   const { success, error, ToastContainer } = useToast();
 
   const loadProfile = useCallback(async () => {
@@ -85,7 +89,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       setRulesLoading(true);
       try {
         const res = await apiService.getWorkerRules();
-        const raw = res?.text || res?.data?.text || 'Правила не найдены.';
+        const data = (res as any)?.data ?? res;
+        const raw = data?.text || 'Правила не найдены.';
         setRulesText(raw.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim());
       } catch {
         setRulesText('Не удалось загрузить правила.');
@@ -100,7 +105,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     if (!referralLink) {
       try {
         const res = await apiService.getReferralInfo();
-        setReferralLink(res?.link || res?.data?.link || '');
+        const data = (res as any)?.data ?? res;
+        setReferralLink(data?.link || '');
       } catch {
         setReferralLink('');
       }
@@ -132,6 +138,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const handleOpenCityModal = async () => {
     setShowCityModal(true);
     setCitySearch('');
+    setCityChangeTargetName(null); // Reset state when opening modal
     if (cities.length === 0) {
       setCityLoading(true);
       try {
@@ -147,13 +154,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleSelectCity = async (cityId: number, cityName: string) => {
+    if (cityChangeLoading || cityChangeTargetName) return; // Prevent multiple clicks
+    
+    setCityChangeLoading(true);
     try {
       await apiService.requestCityChange(cityId);
-      success(`Запрос на смену города «${cityName}» отправлен`);
+      setCityChangeTargetName(cityName);
+      success(`✓ Запрос на смену города «${cityName}» отправлен менеджеру`);
       setShowCityModal(false);
     } catch (err: any) {
       error(err.message || 'Ошибка отправки запроса');
+    } finally {
+      setCityChangeLoading(false);
     }
+  };
+
+  const isCityButtonDisabled = (cityName: string) => {
+    return cityChangeLoading || (cityChangeTargetName === cityName);
   };
 
   const handleLogout = async () => {
@@ -175,14 +192,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const parts = fio.split(/\s+/);
   const initials = `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
 
+  const ratingNum = typeof panel?.rating === 'number' ? panel.rating : typeof panel?.rating === 'string' ? parseFloat(panel.rating) : null;
+  const ratingValue = (ratingNum != null && !isNaN(ratingNum)) ? Math.floor(ratingNum) : '—';
+
   const stats = [
     { label: 'Баланс', value: `${panel?.balance ?? 0} ₽`, icon: 'cash-outline' as const, color: '#27AE60', bg: '#EAFAF1' },
-    { 
-      label: 'Рейтинг', 
-      value: panel?.rating != null ? Math.floor(panel.rating) : '—', 
-      icon: 'star-outline' as const, 
-      color: '#F39C12', 
-      bg: '#FEF9E7' 
+    {
+      label: 'Рейтинг',
+      value: ratingValue,
+      icon: 'star-outline' as const,
+      color: '#F39C12',
+      bg: '#FEF9E7'
     },
     { label: 'Заказов', value: String(panel?.total_orders ?? 0), icon: 'briefcase-outline' as const, color: '#4A90D9', bg: '#EBF4FF' },
     { label: 'Выполнено', value: String(panel?.successful_orders ?? 0), icon: 'checkmark-circle-outline' as const, color: '#7B68EE', bg: '#F0EEFF' },
@@ -197,9 +217,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   ];
 
   const actions = [
-    { icon: 'document-text-outline' as const, label: 'Правила работы', onPress: handleOpenRules },
+    { icon: 'document-text-outline' as const, label: 'Правила', onPress: handleOpenRules },
     { icon: 'gift-outline' as const, label: 'Реферальная программа', onPress: handleOpenReferral },
-    { icon: 'chatbubble-outline' as const, label: 'Поддержка', onPress: () => success('Обращение направлено') },
+    { icon: 'chatbubble-outline' as const, label: 'Поддержка', onPress: () => navigation.navigate('Support') },
+    { icon: 'trash-outline' as const, label: 'Удалить данные', onPress: () => navigation.navigate('RemoveAccount'), danger: true },
   ];
 
   return (
@@ -333,11 +354,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 onPress={item.onPress}
                 activeOpacity={0.7}
               >
-                <View style={styles.actionIconWrap}>
-                  <Ionicons name={item.icon} size={20} color={COLORS.primary} />
+                <View style={[styles.actionIconWrap, item.danger && styles.actionIconWrapDanger]}>
+                  <Ionicons name={item.icon} size={20} color={item.danger ? COLORS.error : COLORS.primary} />
                 </View>
-                <Text style={styles.actionLabel}>{item.label}</Text>
-                <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
+                <Text style={[styles.actionLabel, item.danger && styles.actionLabelDanger]}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={18} color={item.danger ? COLORS.error : COLORS.gray} />
               </TouchableOpacity>
             ))}
           </View>
@@ -352,7 +373,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
 
-      <CustomModal visible={showRules} onClose={() => setShowRules(false)} title="Правила работы">
+      <CustomModal visible={showRules} onClose={() => setShowRules(false)} title="Правила">
         <Text style={styles.modalText}>{rulesLoading ? 'Загрузка...' : (rulesText || 'Правила не найдены.')}</Text>
       </CustomModal>
 
@@ -367,7 +388,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
       <CustomModal
         visible={showCityModal}
-        onClose={() => { setShowCityModal(false); setCitySearch(''); }}
+        onClose={() => { setShowCityModal(false); setCitySearch(''); setCityChangeTargetName(null); }}
         title="Сменить город"
       >
         <Text style={styles.cityModalHint}>
@@ -385,8 +406,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           ) : cities.filter(c => c.name?.toLowerCase().includes(citySearch.toLowerCase())).map((c) => (
             <View key={c.id} style={styles.cityItem}>
               <Button
-                title={c.name}
+                title={cityChangeTargetName === c.name ? '✓ Отправлено' : c.name}
                 onPress={() => handleSelectCity(c.id, c.name)}
+                loading={cityChangeLoading && cityChangeTargetName === c.name}
+                disabled={isCityButtonDisabled(c.name)}
                 variant={panel?.city === c.name ? 'primary' : 'outline'}
                 fullWidth
                 size="medium"
@@ -554,6 +577,8 @@ const styles = StyleSheet.create({
     marginRight: SPACING.m,
   },
   actionLabel: { flex: 1, fontSize: FONT_SIZES.m, color: COLORS.text },
+  actionIconWrapDanger: { backgroundColor: '#FDEDEC' },
+  actionLabelDanger: { color: COLORS.error },
 
   /* Logout */
   logoutBtn: {

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AlgoritmPlus",
+    "name": "Алгоритм Плюс",
     "slug": "algoritmplus-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -30,6 +30,18 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": []
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "640fff81-b34b-4373-99bf-0e95af2e080b"
+      }
+    }
   }
 }

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Linking } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { SafeView } from '../components/SafeView';
+import { storage } from '../utils/storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
@@ -15,6 +16,7 @@ type RootStackParamList = {
   Dashboard: undefined;
 };
 
+
 type EntryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Entry'>;
 
 interface EntryScreenProps {
@@ -22,6 +24,12 @@ interface EntryScreenProps {
 }
 
 export const EntryScreen: React.FC<EntryScreenProps> = ({ navigation }) => {
+  useEffect(() => {
+    storage.getToken().then((token) => {
+      if (token) navigation.replace('Dashboard');
+    });
+  }, []);
+
   return (
     <SafeView style={styles.container}>
       <KeyboardAvoidingView

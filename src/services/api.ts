@@ -89,17 +89,17 @@ class ApiService {
   // Profile endpoints
   async getMe() {
     const response = await this.api.get<ApiResponse<any>>('/users/me');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async getProfileAboutPanel() {
     const response = await this.api.get<ApiResponse<any>>('/users/me/about-panel');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async getRating() {
     const response = await this.api.get<ApiResponse<any>>('/users/me/rating');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async updateBankCard(card: string, innLast4: string) {
@@ -119,17 +119,17 @@ class ApiService {
 
   async getReferralInfo() {
     const response = await this.api.get<ApiResponse<any>>('/users/me/referral-pack');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async createPayment(amount: number) {
     const response = await this.api.post<ApiResponse<any>>('/users/me/create-payment', { amount: String(amount) });
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async getPendingContracts() {
     const response = await this.api.get<ApiResponse<any[]>>('/users/me/pending-contracts');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async ensureContracts(pin: string) {
@@ -163,7 +163,7 @@ class ApiService {
   // Applications endpoints
   async getMyOrders(params?: { status?: string }) {
     const response = await this.api.get<ApiResponse<any>>('/applications/orders', { params });
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async withdrawApplication(orderId: number) {
@@ -184,43 +184,97 @@ class ApiService {
   // Notifications endpoints
   async getNotifications() {
     const response = await this.api.get<ApiResponse<any[]>>('/notifications/');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async markNotificationsAsRead(ids: number[]) {
     const response = await this.api.post<ApiResponse<void>>('/notifications/mark-read', { ids });
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
+  }
+
+  async registerDeviceToken(token: string) {
+    await this.api.post('/device-tokens', { token });
+  }
+
+  async deregisterDeviceToken(token: string) {
+    await this.api.delete(`/device-tokens/${encodeURIComponent(token)}`);
   }
 
   // Promotions endpoints
   async getPromotions() {
     const response = await this.api.get<ApiResponse<any[]>>('/promotions/');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async joinPromotion(promotionId: number) {
     const response = await this.api.post<ApiResponse<void>>(`/promotions/${promotionId}/join`);
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async getBonuses() {
     const response = await this.api.get<ApiResponse<any[]>>('/promotions/bonuses');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   // Meta endpoints
   async getCities() {
     const response = await this.api.get<ApiResponse<any[]>>('/meta/cities');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async getWorkerRules() {
     const response = await this.api.get<ApiResponse<{ text: string }>>('/meta/worker-rules');
-    return response.data;
+    return (response.data as any)?.data ?? response.data;
   }
 
   async getPanelMenu() {
     const response = await this.api.get<ApiResponse<any>>('/meta/panel-menu');
+    return (response.data as any)?.data ?? response.data;
+  }
+
+  // Help/Support endpoints
+  async getHelpInfo() {
+    const response = await this.api.get<ApiResponse<any>>('/help');
+    return response.data;
+  }
+
+  async sendHelpMessage(message: string, files?: { uri: string; name: string; type: string }[]) {
+    const formData = new FormData();
+    formData.append('message', message);
+    
+    if (files && files.length > 0) {
+      files.forEach((file) => {
+        formData.append('files', {
+          uri: file.uri,
+          name: file.name,
+          type: file.type,
+        } as any);
+      });
+    }
+
+    const response = await this.api.post('/help/send', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async sendHelpSignal() {
+    const response = await this.api.post<ApiResponse<any>>('/help/signal');
+    return response.data;
+  }
+
+  // Account deletion
+  async getDataErasureNotice() {
+    const response = await this.api.get<ApiResponse<{ message: string }>>('/users/me/data-erasure-notice');
+    return response.data;
+  }
+
+  async erasePersonalData() {
+    const response = await this.api.post<ApiResponse<{ message: string }>>('/users/me/erase-personal-data', {
+      confirm: true,
+    });
     return response.data;
   }
 }

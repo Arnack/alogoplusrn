@@ -56,7 +56,7 @@ export const RegisterAgreementScreen: React.FC<RegisterAgreementProps> = ({ navi
             <View style={styles.agreementCard}>
               <Text style={styles.agreementTitle}>Договор оферты</Text>
               <Text style={styles.agreementText}>
-                Настоящим вы подтверждаете своё согласие с условиями оказания услуг платформой AlgoritmPlus.
+                Настоящим вы подтверждаете своё согласие с условиями оказания услуг платформой Алгоритм Плюс.
               </Text>
               <Text style={styles.userName}>{fullName}</Text>
               <Text style={styles.userDetail}>ИНН: {inn}</Text>

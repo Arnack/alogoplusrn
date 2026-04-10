@@ -1,7 +1,8 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useRef } from 'react';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { setupNotificationHandlers } from '../services/pushNotifications';
 
 // Screens
 import { EntryScreen } from '../screens/EntryScreen';
@@ -20,8 +21,10 @@ import { SearchOrdersScreen } from '../screens/SearchOrdersScreen';
 import { MyOrdersScreen } from '../screens/MyOrdersScreen';
 import { WalletScreen } from '../screens/WalletScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { RemoveAccountScreen } from '../screens/RemoveAccountScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { PromotionsScreen } from '../screens/PromotionsScreen';
+import { SupportScreen } from '../screens/SupportScreen';
 
 // Theme
 import { COLORS } from '../constants';
@@ -44,15 +47,27 @@ export type RootStackParamList = {
   MyOrders: undefined;
   Wallet: undefined;
   Profile: undefined;
+  RemoveAccount: undefined;
   Notifications: undefined;
   Promotions: undefined;
+  Support: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const AppNavigator: React.FC = () => {
+  const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+
+  useEffect(() => {
+    const cleanup = setupNotificationHandlers(
+      () => {}, // foreground: nothing extra needed, polling handles refresh
+      () => navRef.current?.navigate('Notifications'),
+    );
+    return cleanup;
+  }, []);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navRef}>
       <Stack.Navigator
         initialRouteName="Entry"
         screenOptions={{
@@ -79,8 +94,10 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="MyOrders" component={MyOrdersScreen} />
         <Stack.Screen name="Wallet" component={WalletScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="RemoveAccount" component={RemoveAccountScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Promotions" component={PromotionsScreen} />
+        <Stack.Screen name="Support" component={SupportScreen} />
       </Stack.Navigator>
       <StatusBar style="dark" />
     </NavigationContainer>

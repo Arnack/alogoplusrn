@@ -105,6 +105,10 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
     return order.day_shift ? COLORS.day : COLORS.night;
   };
 
+  const getDayOfWeekColor = () => {
+    return COLORS.weekday;
+  };
+
   const renderOrderCard = (order: any, isApplication: boolean) => {
     return (
       <Card key={order.order_id} style={styles.orderCard}>
@@ -128,7 +132,12 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
         <View style={styles.orderDetails}>
           <View style={styles.orderDetail}>
             <Text style={styles.orderDetailLabel}>Дата</Text>
-            <Text style={styles.orderDetailValue}>{order.date}{order.day_of_week ? `, ${order.day_of_week}` : ''}</Text>
+            <Text style={styles.orderDetailValue}>
+              {order.date}
+              {order.day_of_week ? (
+                <Text style={{ color: getDayOfWeekColor(), fontWeight: '600' }}>{`, ${order.day_of_week}`}</Text>
+              ) : null}
+            </Text>
           </View>
           <View style={styles.orderDetail}>
             <Text style={styles.orderDetailLabel}>Смена</Text>

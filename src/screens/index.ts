@@ -13,5 +13,6 @@ export { SearchOrdersScreen } from './SearchOrdersScreen';
 export { MyOrdersScreen } from './MyOrdersScreen';
 export { WalletScreen } from './WalletScreen';
 export { ProfileScreen } from './ProfileScreen';
+export { RemoveAccountScreen } from './RemoveAccountScreen';
 export { NotificationsScreen } from './NotificationsScreen';
 export { PromotionsScreen } from './PromotionsScreen';

@@ -4,6 +4,9 @@ import { MenuItem } from '../types';
 export const API_BASE_URL = 'https://algoritmplus.online/api/v1';
 export const API_TIMEOUT = 30000;
 
+// App Name
+export const APP_NAME = 'Алгоритм Плюс';
+
 // App Colors - Clean, strict theme
 export const COLORS = {
   // Primary
@@ -47,8 +50,9 @@ export const COLORS = {
   borderDark: '#b2bec3',
   
   // Shift colors
-  day: '#3498db',
-  night: '#9b59b6',
+  day: '#F39C12',      // yellow for day shift
+  night: '#000000',    // black for night shift
+  weekday: '#3498db',  // blue for day of week
 };
 
 // Spacing

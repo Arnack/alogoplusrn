@@ -9,6 +9,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { CustomModal } from '../components/Modal';
 import { apiService } from '../services/api';
 import { storage } from '../utils/storage';
+import { registerForPushNotifications } from '../services/pushNotifications';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
@@ -102,6 +103,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         const me = await apiService.getMe();
         await storage.setUser(JSON.stringify(me));
       } catch {}
+
+      registerForPushNotifications(); // fire-and-forget
 
       success('Вы успешно вошли');
       navigation.reset({

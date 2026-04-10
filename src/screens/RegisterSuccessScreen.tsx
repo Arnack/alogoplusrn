@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { SafeView } from '../components/SafeView';
+import { registerForPushNotifications } from '../services/pushNotifications';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
@@ -13,6 +14,14 @@ type RootStackParamList = {
 type RegisterSuccessNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RegisterSuccess'>;
 
 export const RegisterSuccessScreen: React.FC<{ navigation: RegisterSuccessNavigationProp }> = ({ navigation }) => {
+  const handleGoToDashboard = async () => {
+    registerForPushNotifications(); // fire-and-forget
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Dashboard' }],
+    });
+  };
+
   return (
     <SafeView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -23,18 +32,13 @@ export const RegisterSuccessScreen: React.FC<{ navigation: RegisterSuccessNaviga
 
           <Text style={styles.title}>Регистрация завершена!</Text>
           <Text style={styles.subtitle}>
-            Добро пожаловать в AlgoritmPlus.{'\n'}
+            Добро пожаловать в Алгоритм Плюс.{'\n'}
             Ваш аккаунт успешно создан.
           </Text>
 
           <Button
             title="Перейти на главную"
-            onPress={() =>
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Dashboard' }],
-              })
-            }
+            onPress={handleGoToDashboard}
             fullWidth
             size="large"
           />

@@ -41,18 +41,23 @@ const MENU_ITEMS = [
 ];
 
 // AboutPanelOut: { fio_actual, fio_registry, phone_actual, balance, rating, total_orders, successful_orders, in_rr, city, card }
-const STATS = (panel: any) => [
-  { label: 'Баланс', value: `${panel?.balance ?? 0} ₽`, icon: 'cash-outline' as const, color: '#27AE60', bg: '#EAFAF1' },
-  { 
-    label: 'Рейтинг', 
-    value: panel?.rating != null ? Math.floor(panel.rating) : '—', 
-    icon: 'star-outline' as const, 
-    color: '#F39C12', 
-    bg: '#FEF9E7' 
-  },
-  { label: 'Заказов', value: String(panel?.total_orders ?? 0), icon: 'briefcase-outline' as const, color: '#4A90D9', bg: '#EBF4FF' },
-  { label: 'Выполнено', value: String(panel?.successful_orders ?? 0), icon: 'checkmark-circle-outline' as const, color: '#7B68EE', bg: '#F0EEFF' },
-];
+const STATS = (panel: any) => {
+  const ratingNum = typeof panel?.rating === 'number' ? panel.rating : typeof panel?.rating === 'string' ? parseFloat(panel.rating) : null;
+  const ratingValue = (ratingNum != null && !isNaN(ratingNum)) ? Math.floor(ratingNum) : '—';
+  
+  return [
+    { label: 'Баланс', value: `${panel?.balance ?? 0} ₽`, icon: 'cash-outline' as const, color: '#27AE60', bg: '#EAFAF1' },
+    {
+      label: 'Рейтинг',
+      value: ratingValue,
+      icon: 'star-outline' as const,
+      color: '#F39C12',
+      bg: '#FEF9E7'
+    },
+    { label: 'Заказов', value: String(panel?.total_orders ?? 0), icon: 'briefcase-outline' as const, color: '#4A90D9', bg: '#EBF4FF' },
+    { label: 'Выполнено', value: String(panel?.successful_orders ?? 0), icon: 'checkmark-circle-outline' as const, color: '#7B68EE', bg: '#F0EEFF' },
+  ];
+};
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [panel, setPanel] = useState<any>(null);
@@ -68,7 +73,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
       ]);
       setPanel(panelRes);
       // NotificationsResponse: { items: [...], unread_count: int }
-      setUnreadCount(notifRes?.unread_count ?? 0);
+      const notifData = (notifRes as any)?.data ?? notifRes;
+      setUnreadCount(notifData?.unread_count ?? 0);
     } catch (e) {
       console.error('Dashboard load error:', e);
     } finally {
