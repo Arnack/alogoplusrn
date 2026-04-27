@@ -46,7 +46,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [editingCard, setEditingCard] = useState(false);
   const [newCard, setNewCard] = useState('');
   const [innLast4, setInnLast4] = useState('');
-  const [editingActualData, setEditingActualData] = useState(false);
+  const [editingField, setEditingField] = useState<'phone' | 'fio' | null>(null);
   const [actualPhone, setActualPhone] = useState('');
   const [actualFio, setActualFio] = useState('');
   const [actualDataLoading, setActualDataLoading] = useState(false);
@@ -139,14 +139,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleStartEditActualData = () => {
+  const handleStartEditPhone = () => {
     setActualPhone(panel?.phone_actual || '');
-    setActualFio(panel?.fio_actual || '');
-    setEditingActualData(true);
+    setEditingField('phone');
   };
 
-  const handleCancelEditActualData = () => {
-    setEditingActualData(false);
+  const handleStartEditFio = () => {
+    setActualFio(panel?.fio_actual || '');
+    setEditingField('fio');
+  };
+
+  const handleCancelEditField = () => {
+    setEditingField(null);
     setActualPhone('');
     setActualFio('');
   };
@@ -156,15 +160,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     if (cleaned.length <= 12) setActualPhone(cleaned);
   };
 
-  const handleUpdateActualData = async () => {
+  const handleUpdatePhone = async () => {
     const phoneDigits = actualPhone.replace(/\D/g, '');
-    const fioTrimmed = actualFio.trim().replace(/\s+/g, ' ');
-
     if (phoneDigits.length < 10) {
       error('Введите корректный фактический телефон');
       return;
     }
 
+    setActualDataLoading(true);
+    try {
+      await apiService.updateSecurityData({
+        phone_actual: actualPhone.trim(),
+      });
+      success('Телефон обновлен');
+      setEditingField(null);
+      setActualPhone('');
+      loadProfile();
+    } catch (err: any) {
+      error(err.message || 'Ошибка обновления телефона');
+    } finally {
+      setActualDataLoading(false);
+    }
+  };
+
+  const handleUpdateFio = async () => {
+    const fioTrimmed = actualFio.trim().replace(/\s+/g, ' ');
     if (fioTrimmed.split(/\s+/).length < 2) {
       error('Введите корректное фактическое ФИО');
       return;
@@ -173,16 +193,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     setActualDataLoading(true);
     try {
       await apiService.updateSecurityData({
-        phone_actual: actualPhone.trim(),
         fio_actual: fioTrimmed,
       });
-      success('Данные обновлены');
-      setEditingActualData(false);
-      setActualPhone('');
+      success('ФИО обновлено');
+      setEditingField(null);
       setActualFio('');
       loadProfile();
     } catch (err: any) {
-      error(err.message || 'Ошибка обновления данных');
+      error(err.message || 'Ошибка обновления ФИО');
     } finally {
       setActualDataLoading(false);
     }
@@ -261,11 +279,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     { label: 'Выполнено', value: String(panel?.successful_orders ?? 0), icon: 'checkmark-circle-outline' as const, color: '#7B68EE', bg: '#F0EEFF' },
   ];
 
-  const infoRows = [
+  const staticInfoRows = [
     { label: 'Телефон (реестр)', value: panel?.phone_registry || '—' },
-    { label: 'Телефон (факт.)', value: panel?.phone_actual || '—' },
     { label: 'ФИО (реестр)', value: panel?.fio_registry || '—' },
-    { label: 'ФИО (факт.)', value: panel?.fio_actual || '—' },
     { label: 'ИНН', value: me?.inn_masked || '—' },
   ];
 
@@ -330,40 +346,59 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         {/* Personal info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Личные данные</Text>
-          {editingActualData ? (
+          {editingField ? (
             <View style={[styles.card, { padding: SPACING.m }]}>
-              <Input
-                label="Телефон (факт.)"
-                value={actualPhone}
-                onChangeText={handleActualPhoneChange}
-                placeholder="+79000000000"
-                keyboardType="phone-pad"
-                maxLength={12}
-              />
-              <Input
-                label="ФИО (факт.)"
-                value={actualFio}
-                onChangeText={setActualFio}
-                placeholder="Фамилия Имя Отчество"
-                autoCapitalize="words"
-              />
-              <View style={styles.cardActions}>
-                <Button title="Отмена" onPress={handleCancelEditActualData} variant="outline" style={styles.cardAction} disabled={actualDataLoading} />
-                <Button title="Сохранить" onPress={handleUpdateActualData} style={styles.cardAction} loading={actualDataLoading} />
-              </View>
+              {editingField === 'phone' ? (
+                <>
+                  <Input
+                    label="Телефон (факт.)"
+                    value={actualPhone}
+                    onChangeText={handleActualPhoneChange}
+                    placeholder="+79000000000"
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                  />
+                  <View style={styles.cardActions}>
+                    <Button title="Отмена" onPress={handleCancelEditField} variant="outline" style={styles.cardAction} disabled={actualDataLoading} />
+                    <Button title="Сохранить" onPress={handleUpdatePhone} style={styles.cardAction} loading={actualDataLoading} />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Input
+                    label="ФИО (факт.)"
+                    value={actualFio}
+                    onChangeText={setActualFio}
+                    placeholder="Фамилия Имя Отчество"
+                    autoCapitalize="words"
+                  />
+                  <View style={styles.cardActions}>
+                    <Button title="Отмена" onPress={handleCancelEditField} variant="outline" style={styles.cardAction} disabled={actualDataLoading} />
+                    <Button title="Сохранить" onPress={handleUpdateFio} style={styles.cardAction} loading={actualDataLoading} />
+                  </View>
+                </>
+              )}
             </View>
           ) : (
             <View style={styles.card}>
-              {infoRows.map((row) => (
+              {staticInfoRows.map((row) => (
                 <View key={row.label} style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{row.label}</Text>
                   <Text style={styles.infoValue} numberOfLines={1}>{row.value}</Text>
                 </View>
               ))}
-              <TouchableOpacity style={styles.infoRow} onPress={handleStartEditActualData} activeOpacity={0.7}>
-                <Text style={styles.infoLabel}>Изменить факт. данные</Text>
+              <TouchableOpacity style={styles.infoRow} onPress={handleStartEditPhone} activeOpacity={0.7}>
+                <Text style={styles.infoLabel}>Телефон (факт.)</Text>
                 <View style={styles.infoValueRow}>
-                  <Ionicons name="pencil-outline" size={14} color={COLORS.primary} />
+                  <Text style={styles.infoValue} numberOfLines={1}>{panel?.phone_actual || '—'}</Text>
+                  <Ionicons name="pencil-outline" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.infoRow} onPress={handleStartEditFio} activeOpacity={0.7}>
+                <Text style={styles.infoLabel}>ФИО (факт.)</Text>
+                <View style={styles.infoValueRow}>
+                  <Text style={styles.infoValue} numberOfLines={1}>{panel?.fio_actual || '—'}</Text>
+                  <Ionicons name="pencil-outline" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.infoRow} onPress={handleOpenCityModal} activeOpacity={0.7}>
