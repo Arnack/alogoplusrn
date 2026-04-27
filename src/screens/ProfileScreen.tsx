@@ -196,7 +196,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const ratingValue = (ratingNum != null && !isNaN(ratingNum)) ? Math.floor(ratingNum) : '—';
 
   const stats = [
-    { label: 'Баланс', value: `${panel?.balance ?? 0} ₽`, icon: 'cash-outline' as const, color: '#27AE60', bg: '#EAFAF1' },
+    { label: 'Начисления', value: `${panel?.balance ?? 0} ₽`, icon: 'cash-outline' as const, color: '#27AE60', bg: '#EAFAF1' },
     {
       label: 'Рейтинг',
       value: ratingValue,

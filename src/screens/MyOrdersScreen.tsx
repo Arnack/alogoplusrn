@@ -77,8 +77,8 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
   };
 
   const getShiftLabel = (order: any) => {
-    if (order.day_shift) return `День  ${order.day_shift}`;
-    if (order.night_shift) return `Ночь  ${order.night_shift}`;
+    if (order.day_shift) return `Дневной  ${order.day_shift}`;
+    if (order.night_shift) return `Ночной  ${order.night_shift}`;
     return '—';
   };
 
@@ -127,7 +127,7 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
             </Text>
           </View>
           <View style={styles.orderDetail}>
-            <Text style={styles.orderDetailLabel}>Смена</Text>
+            <Text style={styles.orderDetailLabel}>Период оказания услуг</Text>
             <View style={[styles.shiftBadge, { backgroundColor: getShiftColor(order) + '20' }]}>
               <Text style={[styles.shiftBadgeText, { color: getShiftColor(order) }]}>
                 {getShiftLabel(order)}

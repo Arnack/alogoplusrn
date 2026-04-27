@@ -325,7 +325,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                         <Text style={styles.orderDetailValue}>{order.date}</Text>
                       </View>
                       <View style={styles.orderDetail}>
-                        <Text style={styles.orderDetailLabel}>Смена</Text>
+                        <Text style={styles.orderDetailLabel}>Период оказания услуг</Text>
                         <View style={[styles.shiftBadge, { backgroundColor: getShiftColor(order) + '20' }]}>
                           <Text style={[styles.shiftBadgeText, { color: getShiftColor(order) }]}>
                             {getShiftLabel(order)}
@@ -419,30 +419,38 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                   </Text>
 
                   <Text style={styles.contractTextBlock}>
-                    Подписание осуществляется вводом 4 цифр одного из ваших идентификаторов.
-                    {'\n'}Способ выбирается случайно: последние 4 цифры ИНН, день и месяц рождения, год рождения или последние 4 цифры паспорта.
+                    Подписание — ввод 4 цифр одного из ваших идентификаторов.
                   </Text>
 
                   <Text style={styles.contractTextBlock}>
-                    Подписывая договор и принимая Заявку, вы подтверждаете, что:
+                    Подтверждая подписание договора и принятие Заявки, вы подтверждаете, что:
                   </Text>
 
                   <Text style={styles.contractBulletPoint}>
                     • действуете добровольно, самостоятельно и в своих интересах;
                   </Text>
                   <Text style={styles.contractBulletPoint}>
-                    • принимаете обязательство по оказанию услуг в рамках гражданско-правового договора;
+                    • самостоятельно принимаете решение об оказании услуг;
                   </Text>
                   <Text style={styles.contractBulletPoint}>
-                    • не состоите в трудовых отношениях с Платформой и/или третьими лицами по данной Заявке;
+                    • оказываете услуги в рамках гражданско-правового договора;
                   </Text>
                   <Text style={styles.contractBulletPoint}>
-                    • ознакомлены и согласны с условиями Заявки и договора.
+                    • не состоите и не вступаете в трудовые отношения с Платформой и Получателем услуг;
+                  </Text>
+                  <Text style={styles.contractBulletPoint}>
+                    • не подчиняетесь правилам внутреннего трудового распорядка;
+                  </Text>
+                  <Text style={styles.contractBulletPoint}>
+                    • самостоятельно организуете оказание услуг и несёте соответствующие риски;
+                  </Text>
+                  <Text style={styles.contractBulletPoint}>
+                    • ознакомлены и согласны с условиями договора и Заявки.
                   </Text>
 
                   <Text style={styles.contractTextBlock}>
-                    Подтверждение распространяется сразу на 3 договора с юридическими лицами Платформы.
-                    {'\n'}При выплате останется рабочим только договор выбранного юрлица.
+                    ⚖️ Платформа является информационной системой и не выступает работодателем,
+                    {'\n'}заказчиком услуг или платёжным агентом.
                   </Text>
 
                   <Text style={styles.contractWarningText}>
