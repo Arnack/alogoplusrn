@@ -1,6 +1,6 @@
 {
   "name": "algoritmplus-mobile",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Expo React Native app for AlgoritmPlus freelance platform",
   "main": "index.js",
   "scripts": {

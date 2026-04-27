@@ -129,23 +129,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats */}
-        <View style={styles.statsGrid}>
-          {stats.map((s) => (
-            <View key={s.label} style={styles.statCard}>
-              <View style={[styles.statIconWrap, { backgroundColor: s.bg }]}>
-                <Ionicons name={s.icon} size={18} color={s.color} />
-              </View>
-              <View style={styles.statTexts}>
-                <Text style={styles.statValue}>{s.value}</Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
 
         {/* Menu */}
-        <Text style={styles.sectionTitle}>Меню</Text>
         <View style={styles.menuGrid}>
           {MENU_ITEMS.map((item) => (
             <TouchableOpacity
@@ -167,7 +152,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F6FA' },
+  container: { flex: 1, backgroundColor: COLORS.background },
 
   /* Header */
   header: {

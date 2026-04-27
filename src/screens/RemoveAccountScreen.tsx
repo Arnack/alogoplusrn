@@ -174,7 +174,7 @@ export const RemoveAccountScreen: React.FC<RemoveAccountScreenProps> = ({ naviga
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F6FA' },
+  container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { paddingBottom: SPACING.xl, paddingHorizontal: SPACING.l, paddingTop: SPACING.l },
 
   /* Warning Icon */

@@ -13,11 +13,11 @@ export const COLORS = {
   primary: '#1a1a2e',
   primaryLight: '#16213e',
   primaryDark: '#0f0f1a',
-  
+
   // Accent
   accent: '#0f3460',
   accentLight: '#1a4a7a',
-  
+
   // Status colors
   success: '#27ae60',
   successLight: '#2ecc71',
@@ -27,28 +27,28 @@ export const COLORS = {
   errorLight: '#ff6b6b',
   info: '#3498db',
   infoLight: '#5dade2',
-  
+
   // Neutral
   white: '#ffffff',
   black: '#000000',
   gray: '#95a5a6',
   grayLight: '#ecf0f1',
   grayDark: '#7f8c8d',
-  
+
   // Background
-  background: '#f5f6fa',
+  background: '#ffffff',
   backgroundDark: '#dfe4ea',
   card: '#ffffff',
-  
+
   // Text
   text: '#2c3e50',
   textLight: '#7f8c8d',
   textDark: '#2c3e50',
-  
+
   // Border
   border: '#dfe6e9',
   borderDark: '#b2bec3',
-  
+
   // Shift colors
   day: '#F39C12',      // yellow for day shift
   night: '#000000',    // black for night shift
@@ -107,27 +107,27 @@ export const MAIN_MENU_ITEMS: MenuItem[] = [
     screen: 'MyOrders',
     color: COLORS.info,
   },
-  {
-    id: 'wallet',
-    title: 'Кошелёк',
-    icon: '💰',
-    screen: 'Wallet',
-    color: COLORS.success,
-  },
-  {
-    id: 'profile',
-    title: 'Профиль',
-    icon: '👤',
-    screen: 'Profile',
-    color: COLORS.accent,
-  },
-  {
-    id: 'notifications',
-    title: 'Уведомления',
-    icon: '📢',
-    screen: 'Notifications',
-    color: COLORS.warning,
-  },
+  // {
+  //   id: 'wallet',
+  //   title: 'Кошелёк',
+  //   icon: '💰',
+  //   screen: 'Wallet',
+  //   color: COLORS.success,
+  // },
+  // {
+  //   id: 'profile',
+  //   title: 'Профиль',
+  //   icon: '👤',
+  //   screen: 'Profile',
+  //   color: COLORS.accent,
+  // },
+  // {
+  //   id: 'notifications',
+  //   title: 'Уведомления',
+  //   icon: '📢',
+  //   screen: 'Notifications',
+  //   color: COLORS.warning,
+  // },
   {
     id: 'promotions',
     title: 'Акции',
@@ -176,7 +176,7 @@ export const SUCCESS_MESSAGES = {
   REGISTER: 'Регистрация завершена.',
   LOGOUT: 'Вы вышли из аккаунта.',
   APPLICATION_CREATED: 'Заявка создана.',
-  APPLICATION_WITHDRAWN: 'Заявка отозвана.',
+  APPLICATION_WITHDRAWN: 'Отклик отозван.',
   PAYMENT_CREATED: 'Заявка на выплату создана.',
   DATA_UPDATED: 'Данные обновлены.',
 };

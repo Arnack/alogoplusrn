@@ -249,12 +249,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <Text style={[styles.heroBadgeText, { color: '#27AE60' }]}>Самозанятый</Text>
               </View>
             )}
-            {panel?.city && (
+            {/* {panel?.city && (
               <View style={styles.heroBadge}>
                 <Ionicons name="location-outline" size={13} color={COLORS.gray} />
                 <Text style={styles.heroBadgeText}>{panel.city}</Text>
               </View>
-            )}
+            )} */}
           </View>
         </View>
 
@@ -291,14 +291,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <Ionicons name="pencil-outline" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
               </View>
             </TouchableOpacity>
-            <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text style={styles.infoLabel}>Статус</Text>
-              <View style={[styles.statusBadge, { backgroundColor: panel?.in_rr ? '#EAFAF1' : '#FDEDEC' }]}>
-                <Text style={[styles.statusText, { color: panel?.in_rr ? '#27AE60' : COLORS.error }]}>
-                  {panel?.in_rr ? 'Самозанятый' : 'Не подтверждено'}
-                </Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -436,7 +428,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F6FA' },
+  container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { paddingBottom: SPACING.xl },
 
   /* Hero */

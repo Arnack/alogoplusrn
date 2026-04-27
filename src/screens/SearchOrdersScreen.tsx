@@ -137,7 +137,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
     try {
       // Always show contract signing modal first
       setApplyingOrderId(null);
-      
+
       // Load contract PDF from local assets
       setContractSign({
         visible: true,
@@ -155,7 +155,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
         const asset = Asset.fromModule(require('../../assets/pdf/agreement.pdf'));
         await asset.downloadAsync();
         const localUri = asset.localUri || asset.uri;
-        
+
         setContractSign(prev => ({
           ...prev,
           contractPdfUrl: localUri,
@@ -186,7 +186,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
     try {
       // Sign contracts
       await apiService.ensureContracts(contractSign.pinType, contractSign.pin);
-      
+
       // Mark contracts as signed in local storage
       await storage.set('has_signed_contracts', 'true');
 
@@ -198,9 +198,9 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
       if (orderId) {
         setApplyingOrderId(orderId);
         await apiService.createOrderApplication(orderId);
-        success('✓ Заявка принята');
+        success('✓ Отклик отправлен');
         setApplyingOrderId(null);
-        
+
         // Refresh orders list
         if (selectedCustomer) {
           await loadOrders(selectedCustomer);
@@ -339,7 +339,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                     ) : null}
 
                     <Button
-                      title="Взять заявку"
+                      title="Принять заявку"
                       onPress={() => handleApplyPress(order.id)}
                       loading={applyingOrderId === order.id}
                       fullWidth
@@ -378,8 +378,8 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                 </TouchableOpacity>
               </View>
 
-              <ScrollView 
-                style={styles.contractModalScroll} 
+              <ScrollView
+                style={styles.contractModalScroll}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
@@ -417,7 +417,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                   <Text style={styles.contractTextBlock}>
                     📄 Для принятия Заявки необходимо заключить гражданско-правовой договор.
                   </Text>
-                  
+
                   <Text style={styles.contractTextBlock}>
                     Подписание осуществляется вводом 4 цифр одного из ваших идентификаторов.
                     {'\n'}Способ выбирается случайно: последние 4 цифры ИНН, день и месяц рождения, год рождения или последние 4 цифры паспорта.
@@ -426,7 +426,7 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                   <Text style={styles.contractTextBlock}>
                     Подписывая договор и принимая Заявку, вы подтверждаете, что:
                   </Text>
-                  
+
                   <Text style={styles.contractBulletPoint}>
                     • действуете добровольно, самостоятельно и в своих интересах;
                   </Text>

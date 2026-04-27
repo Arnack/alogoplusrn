@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew *)",
+      "Bash(echo *)",
+      "Bash(unzip *)",
+      "Bash(zip *)",
+      "Bash(/users/go/library/android/sdk/build-tools/35.0.1/apksigner *)",
+      "Bash(npm *)"
+    ]
+  },
+  "$version": 3
+}

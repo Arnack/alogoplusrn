@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Linking, Image } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { SafeView } from '../components/SafeView';
@@ -36,44 +36,47 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ navigation }) => {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Алгоритм Плюс</Text>
-          <Text style={styles.subtitle}>Платформа для самозанятых</Text>
-        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Image
+              source={require('../../assets/images/icon.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
 
-        <View style={styles.content}>
-          <Button
-            title="Войти"
-            onPress={() => navigation.navigate('Login')}
-            fullWidth
-            size="large"
-          />
+          <View style={styles.content}>
+            <Button
+              title="Войти"
+              onPress={() => navigation.navigate('Login')}
+              fullWidth
+              size="large"
+            />
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <Button
-            title="Регистрация"
-            onPress={() => navigation.navigate('Register', { phone: '', city: '' })}
-            variant="outline"
-            fullWidth
-            size="large"
-          />
-        </View>
+            <Button
+              title="Регистрация"
+              onPress={() => navigation.navigate('Register', { phone: '', city: '' })}
+              variant="outline"
+              fullWidth
+              size="large"
+            />
+          </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Продолжая, вы соглашаетесь с{'\n'}
-            <Text style={styles.footerLink} onPress={() => Linking.openURL('https://algoritmplus.online/user-agreement')}>
-              Пользовательским соглашением
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Продолжая, вы соглашаетесь с{'\n'}
+              <Text style={styles.footerLink} onPress={() => Linking.openURL('https://algoritmplus.online/user-agreement')}>
+                Пользовательским соглашением
+              </Text>
+              {' '}и{' '}
+              <Text style={styles.footerLink} onPress={() => Linking.openURL('https://algoritmplus.online/docs/privacy-policy')}>
+                Политикой конфиденциальности
+              </Text>
             </Text>
-            {' '}и{' '}
-            <Text style={styles.footerLink} onPress={() => Linking.openURL('https://algoritmplus.online/docs/privacy-policy')}>
-              Политикой конфиденциальности
-            </Text>
-          </Text>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeView>
   );
@@ -93,15 +96,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.xxl,
   },
-  title: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: SPACING.xs,
-  },
-  subtitle: {
-    fontSize: FONT_SIZES.l,
-    color: COLORS.gray,
+  logo: {
+    width: 240,
+    height: 240,
   },
   content: {
     backgroundColor: COLORS.white,

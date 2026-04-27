@@ -2,7 +2,7 @@
   "expo": {
     "name": "Алгоритм Плюс",
     "slug": "algoritmplus-mobile",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "algoritmplus",
@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.algoritmplus.app",
       "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": true
+        "UIViewControllerBasedStatusBarAppearance": true,
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -24,7 +25,11 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#1a1a2e"
       },
-      "package": "com.algoritmplus.app"
+      "package": "com.algoritmp.app",
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",

@@ -191,9 +191,9 @@ export const MyOrdersScreen: React.FC<MyOrdersScreenProps> = ({ navigation }) =>
       {/* Withdraw Confirmation Modal */}
       <ConfirmationModal
         visible={showWithdrawModal}
-        title="Отозвать заявку"
-        message="Вы уверены, что хотите отозвать заявку? Это может повлиять на ваш рейтинг."
-        confirmText="Отозвать"
+        title="Отказаться от заявки"
+        message="Вы уверены, что хотите отказаться от заявки? Это может повлиять на ваш рейтинг."
+        confirmText="Отказаться"
         cancelText="Отмена"
         onConfirm={handleWithdrawApplication}
         onCancel={() => setShowWithdrawModal(false)}
