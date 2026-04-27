@@ -46,6 +46,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [editingCard, setEditingCard] = useState(false);
   const [newCard, setNewCard] = useState('');
   const [innLast4, setInnLast4] = useState('');
+  const [editingActualData, setEditingActualData] = useState(false);
+  const [actualPhone, setActualPhone] = useState('');
+  const [actualFio, setActualFio] = useState('');
+  const [actualDataLoading, setActualDataLoading] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [rulesText, setRulesText] = useState('');
   const [rulesLoading, setRulesLoading] = useState(false);
@@ -132,6 +136,55 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       loadProfile();
     } catch (err: any) {
       error(err.message);
+    }
+  };
+
+  const handleStartEditActualData = () => {
+    setActualPhone(panel?.phone_actual || '');
+    setActualFio(panel?.fio_actual || '');
+    setEditingActualData(true);
+  };
+
+  const handleCancelEditActualData = () => {
+    setEditingActualData(false);
+    setActualPhone('');
+    setActualFio('');
+  };
+
+  const handleActualPhoneChange = (text: string) => {
+    const cleaned = text.replace(/[^\d+]/g, '');
+    if (cleaned.length <= 12) setActualPhone(cleaned);
+  };
+
+  const handleUpdateActualData = async () => {
+    const phoneDigits = actualPhone.replace(/\D/g, '');
+    const fioTrimmed = actualFio.trim().replace(/\s+/g, ' ');
+
+    if (phoneDigits.length < 10) {
+      error('Введите корректный фактический телефон');
+      return;
+    }
+
+    if (fioTrimmed.split(/\s+/).length < 2) {
+      error('Введите корректное фактическое ФИО');
+      return;
+    }
+
+    setActualDataLoading(true);
+    try {
+      await apiService.updateSecurityData({
+        phone_actual: actualPhone.trim(),
+        fio_actual: fioTrimmed,
+      });
+      success('Данные обновлены');
+      setEditingActualData(false);
+      setActualPhone('');
+      setActualFio('');
+      loadProfile();
+    } catch (err: any) {
+      error(err.message || 'Ошибка обновления данных');
+    } finally {
+      setActualDataLoading(false);
     }
   };
 
@@ -277,21 +330,51 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         {/* Personal info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Личные данные</Text>
-          <View style={styles.card}>
-            {infoRows.map((row) => (
-              <View key={row.label} style={styles.infoRow}>
-                <Text style={styles.infoLabel}>{row.label}</Text>
-                <Text style={styles.infoValue} numberOfLines={1}>{row.value}</Text>
+          {editingActualData ? (
+            <View style={[styles.card, { padding: SPACING.m }]}>
+              <Input
+                label="Телефон (факт.)"
+                value={actualPhone}
+                onChangeText={handleActualPhoneChange}
+                placeholder="+79000000000"
+                keyboardType="phone-pad"
+                maxLength={12}
+              />
+              <Input
+                label="ФИО (факт.)"
+                value={actualFio}
+                onChangeText={setActualFio}
+                placeholder="Фамилия Имя Отчество"
+                autoCapitalize="words"
+              />
+              <View style={styles.cardActions}>
+                <Button title="Отмена" onPress={handleCancelEditActualData} variant="outline" style={styles.cardAction} disabled={actualDataLoading} />
+                <Button title="Сохранить" onPress={handleUpdateActualData} style={styles.cardAction} loading={actualDataLoading} />
               </View>
-            ))}
-            <TouchableOpacity style={styles.infoRow} onPress={handleOpenCityModal} activeOpacity={0.7}>
-              <Text style={styles.infoLabel}>Город</Text>
-              <View style={styles.infoValueRow}>
-                <Text style={[styles.infoValue, { maxWidth: undefined }]}>{panel?.city || '—'}</Text>
-                <Ionicons name="pencil-outline" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
-              </View>
-            </TouchableOpacity>
-          </View>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              {infoRows.map((row) => (
+                <View key={row.label} style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{row.label}</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>{row.value}</Text>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.infoRow} onPress={handleStartEditActualData} activeOpacity={0.7}>
+                <Text style={styles.infoLabel}>Изменить факт. данные</Text>
+                <View style={styles.infoValueRow}>
+                  <Ionicons name="pencil-outline" size={14} color={COLORS.primary} />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.infoRow} onPress={handleOpenCityModal} activeOpacity={0.7}>
+                <Text style={styles.infoLabel}>Город</Text>
+                <View style={styles.infoValueRow}>
+                  <Text style={[styles.infoValue, { maxWidth: undefined }]}>{panel?.city || '—'}</Text>
+                  <Ionicons name="pencil-outline" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Bank card */}

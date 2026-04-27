@@ -49,6 +49,9 @@ interface OrderItem {
   amount_base: string;
   amount_with_rating: string;
   job_fp: string | null;
+  job_for_payment?: string | null;
+  service_name?: string | null;
+  service?: string | null;
   travel_compensation_rub: number | null;
 }
 
@@ -74,6 +77,11 @@ function stripHtml(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .trim();
+}
+
+function getOrderJobFp(order: OrderItem): string {
+  const value = order.job_fp || order.job_for_payment || order.service_name || order.service || '';
+  return stripHtml(String(value));
 }
 
 export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigation }) => {
@@ -296,7 +304,9 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                   <Text style={styles.emptyText}>Нет доступных заявок</Text>
                 </Card>
               ) : (
-                orders.map((order) => (
+                orders.map((order) => {
+                  const jobFp = getOrderJobFp(order);
+                  return (
                   <Card key={order.id} style={styles.orderCard}>
                     <View style={styles.orderHeader}>
                       <View style={styles.orderHeaderLeft}>
@@ -334,8 +344,8 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                       </View>
                     </View>
 
-                    {order.job_fp ? (
-                      <Text style={styles.jobFp}>{order.job_fp}</Text>
+                    {jobFp ? (
+                      <Text style={styles.jobFp}>{jobFp}</Text>
                     ) : null}
 
                     <Button
@@ -346,7 +356,8 @@ export const SearchOrdersScreen: React.FC<SearchOrdersScreenProps> = ({ navigati
                       size="large"
                     />
                   </Card>
-                ))
+                  );
+                })
               )}
             </View>
           )
